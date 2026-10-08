@@ -67,8 +67,10 @@ public final class SocialIntegrationHarness {
                 var toA=tab(a,b.uuid);var toB=tab(b,a.uuid);
                 check(toA.displayName().getString().equals("SQBob_26"),"ignorer still sees original nick in TAB");
                 check(toB.displayName().getString().equals("Ignored"),"ignored player sees localized anonymous TAB label");
-                check(toA.gameMode()==GameType.SPECTATOR && toB.gameMode()==GameType.SPECTATOR
-                        && toA.latency()==-1 && toB.latency()==-1 && toB.displayName().getStyle().isItalic(),"TAB spectator style and disconnected ping are bilateral");
+                check(toA.gameMode()==GameType.CREATIVE && toB.gameMode()==GameType.CREATIVE
+                        && toA.latency()==-1 && toB.latency()==-1 && toB.displayName().getStyle().isItalic()
+                        && toA.displayName().getStyle().isItalic() && toB.displayName().getStyle().getColor().getValue()==0xAAAAAA,
+                        "TAB style and disconnected ping are bilateral without changing client-visible game mode");
                 clear(a,b,admin);b.chat("ignore-chat-from-b");absent(a,"ignore-chat-from-b");admin.message("ignore-chat-from-b");
                 a.chat("ignore-chat-from-a");absent(b,"ignore-chat-from-a");admin.message("ignore-chat-from-a");
                 a.command("clan chat blocked-clan-chat");absent(b,"blocked-clan-chat");admin.message("blocked-clan-chat");check(true,"ignore also filters clan chat");
