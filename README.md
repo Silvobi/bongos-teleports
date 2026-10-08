@@ -1,4 +1,4 @@
-# Bongo's Teleports 1.3.0
+# Bongo's Teleports 1.4.0
 
 
 ## Autorstwo AI / AI disclosure
@@ -7,11 +7,29 @@ Kod tego moda został napisany przez AI — OpenAI Codex — na podstawie wymaga
 
 This mod's code was written by AI — OpenAI Codex — based on Bongo's requirements and guidance.
 
+## Integracja z Bongo Utils — 1.4.0
+
+Przy zainstalowanym **Bongo Utils 1.4.0**:
+
+- `/ignore <nick>` blokuje TPA między tą parą graczy w obie strony.
+- Włączenie ignorowania lub pełnego `/vanish` anuluje istniejące prośby, potwierdzenia kosztu i odliczania przed teleportacją, bez opłaty XP.
+- Pełny vanish blokuje TPA w obie strony. `/semi-vanish` ukrywa nick w podpowiedziach, ale dopuszcza TPA po dokładnym wpisaniu nicku.
+- `/tpa`, `/tpaccept` i `/tpdeny` korzystają z listy podpowiedzi uwzględniającej widoczność graczy.
+- Narzędzie migracji Bongo Utils przenosi właścicieli padów, cooldowny i `/ignore-tpa`, odświeżając dane w pamięci bez restartu. Pady i ich połączenia w świecie pozostają zachowane.
+
+Teleports nadal działa samodzielnie. Jeśli używasz obu modów, zaktualizuj oba do **1.4.0**. Nie łącz 1.4.0 ze starszą wersją drugiego moda — taka para jest odrzucana podczas startu.
+
+Test współpracy z Utils i Community Clans jest w `socialIntegrationTest`. Wymaga **izolowanego** serwera na porcie 25583, z plikiem `.bongo-social-test`, Fabric API, Utils 1.4.0 i Community Clans 1.0.3. Test zmienia wyłącznie dane testowych kont i sprawdza prawdziwy protokół vanilla, migracje oraz restart:
+
+```powershell
+.\gradlew.bat socialIntegrationTest "-PsocialServer=C:\TEST_SERVER" "-PutilsJar=C:\BongoUtils-1.4.0.jar"
+```
+
 Mod wyłącznie na serwer Fabric Minecraft **26.3**, Java 25, Fabric Loader 0.19.5+, Fabric API 0.161.0+26.3. Klientowi wystarczy vanilla 26.3. Nie wymaga paczki zasobów ani moda klientowego.
 
 ## Instalacja
 
-Umieść `BongosTeleports-1.3.0.jar` w `mods/`, usuń starszy JAR tego moda z `mods/` i uruchom ponownie serwer. Fabric API jest wymagane i już znajduje się na serwerze testowym Bongo. Plik konfiguracyjny to `config/bongos-teleports.json`. Operator poziomu 2+ może wczytać zmiany przez `/bongoteleports reload`. Przeładowanie anuluje oczekujące teleportacje, w tym odliczania padów, aby nowe parametry nie zmieniły zaakceptowanej teleportacji.
+Umieść `BongosTeleports-1.4.0.jar` w `mods/`, usuń starszy JAR tego moda z `mods/` i uruchom ponownie serwer. Fabric API jest wymagane i już znajduje się na serwerze testowym Bongo. Plik konfiguracyjny to `config/bongos-teleports.json`. Operator poziomu 2+ może wczytać zmiany przez `/bongoteleports reload`. Przeładowanie anuluje oczekujące teleportacje, w tym odliczania padów, aby nowe parametry nie zmieniły zaakceptowanej teleportacji.
 
 ## Prośby o teleportację
 
@@ -112,7 +130,7 @@ Pady utworzone w wersji 1.0.0 zachowują swoje połączenia. Stare synchronizery
 
 ## Budowanie i testy
 
-Z JDK 25: `gradlew.bat build`. Wynik: `build/libs/BongosTeleports-1.3.0.jar`, dodatkowo JAR źródeł. Przed pierwszym testem integracyjnym uruchom `./prepare-verification.ps1 -ServerPath 'C:\ścieżka\do\serwera'`, a następnie `gradlew.bat integrationTest feedbackTest durabilityTest languageTest`. Testy używają osobnego katalogu `verification-server`, lokalnego portu 25582 i klientów protokołu vanilla. W tej kopii mod BongoUtils jest odsuwany do `external-auth-mods`, aby logowanie klientów testowych nie zależało od zewnętrznego API Mojang; serwer docelowy zachowuje ten mod. Środowisko testowe ma skrócone czasy; docelowy config zachowuje domyślne 5 i 60 sekund. Nie używaj świata produkcyjnego w katalogu weryfikacji: test resetuje dane teleportów i modyfikuje swój świat.
+Z JDK 25: `gradlew.bat build`. Wynik: `build/libs/BongosTeleports-1.4.0.jar`, dodatkowo JAR źródeł. Przed pierwszym testem integracyjnym uruchom `./prepare-verification.ps1 -ServerPath 'C:\ścieżka\do\serwera'`, a następnie `gradlew.bat integrationTest feedbackTest durabilityTest languageTest`. Testy używają osobnego katalogu `verification-server`, lokalnego portu 25582 i klientów protokołu vanilla. W tej kopii mod BongoUtils jest odsuwany do `external-auth-mods`, aby logowanie klientów testowych nie zależało od zewnętrznego API Mojang; serwer docelowy zachowuje ten mod. Środowisko testowe ma skrócone czasy; docelowy config zachowuje domyślne 5 i 60 sekund. Nie używaj świata produkcyjnego w katalogu weryfikacji: test resetuje dane teleportów i modyfikuje swój świat.
 
 Plik `teleports-verification.jar` służy wyłącznie testom craftingu; nie instalować go na docelowym serwerze.
 

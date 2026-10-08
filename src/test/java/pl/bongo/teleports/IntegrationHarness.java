@@ -281,6 +281,9 @@ public final class IntegrationHarness {
                 else if(type==GamePacketTypes.CLIENTBOUND_ADD_ENTITY) result=ClientboundAddEntityPacket.STREAM_CODEC.decode(buffer);
                 else if(type==GamePacketTypes.CLIENTBOUND_SET_ENTITY_DATA) result=ClientboundSetEntityDataPacket.STREAM_CODEC.decode(buffer);
                 else if(type==GamePacketTypes.CLIENTBOUND_REMOVE_ENTITIES) result=ClientboundRemoveEntitiesPacket.STREAM_CODEC.decode(buffer);
+                else if(type==GamePacketTypes.CLIENTBOUND_PLAYER_INFO_REMOVE) result=ClientboundPlayerInfoRemovePacket.STREAM_CODEC.decode(buffer);
+                else if(type==GamePacketTypes.CLIENTBOUND_COMMAND_SUGGESTIONS) result=ClientboundCommandSuggestionsPacket.STREAM_CODEC.decode(buffer);
+                else if(type==GamePacketTypes.CLIENTBOUND_BLOCK_EVENT) result=ClientboundBlockEventPacket.STREAM_CODEC.decode(buffer);
                 else if(type==GamePacketTypes.CLIENTBOUND_SOUND) result=ClientboundSoundPacket.STREAM_CODEC.decode(buffer);
                 else if(type==GamePacketTypes.CLIENTBOUND_STOP_SOUND) result=ClientboundStopSoundPacket.STREAM_CODEC.decode(buffer);
                 else if(type==GamePacketTypes.CLIENTBOUND_PLAYER_POSITION) {
