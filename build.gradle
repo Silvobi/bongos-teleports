@@ -1,5 +1,5 @@
 plugins { id 'net.fabricmc.fabric-loom' version '1.17.12' }
-version = '1.3.0'
+version = '1.4.0'
 group = 'pl.bongo'
 base { archivesName = 'BongosTeleports' }
 repositories { mavenCentral() }
@@ -13,7 +13,7 @@ dependencies {
 }
 java { toolchain.languageVersion = JavaLanguageVersion.of(25); withSourcesJar() }
 tasks.withType(JavaCompile).configureEach { options.encoding = 'UTF-8'; options.release = 25 }
-processResources { filesMatching('fabric.mod.json') { expand version: project.version } }
+processResources { inputs.property 'version', project.version; filesMatching('fabric.mod.json') { expand version: project.version } }
 test { useJUnitPlatform() }
 sourceSets {
     verification {
@@ -73,4 +73,16 @@ tasks.register('languageTest', JavaExec) {
     mainClass = 'pl.bongo.teleports.LanguageHarness'
     args layout.projectDirectory.dir('verification-server').asFile.absolutePath
     doFirst { stageVerificationMods() }
+}
+
+tasks.register('socialIntegrationTest', JavaExec) {
+    dependsOn testClasses, jar, verificationJar
+    classpath = sourceSets.test.runtimeClasspath
+    mainClass = 'pl.bongo.teleports.SocialIntegrationHarness'
+    args(project.findProperty('socialServer') ?: 'verification-server')
+    doFirst {
+        def target = file(project.findProperty('socialServer') ?: 'verification-server')
+        copy { from tasks.jar.archiveFile; from tasks.verificationJar.archiveFile; into new File(target, 'mods') }
+        if (project.hasProperty('utilsJar')) copy { from file(project.property('utilsJar')); into new File(target, 'mods') }
+    }
 }

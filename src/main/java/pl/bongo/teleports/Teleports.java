@@ -129,16 +129,23 @@ public final class Teleports implements ModInitializer {
             p instanceof ServerPlayer sp && clearSynchronizer(sp) ? InteractionResult.FAIL : InteractionResult.PASS);
     }
     private void save() { Storage.write(dataPath,data); }
+    public static void migrationSave() { if(instance!=null && instance.data!=null) instance.save(); }
+    public static void migrationReload() {
+        if(instance==null || instance.data==null) return;
+        Storage.Data next=Storage.read(instance.dataPath,Storage.Data.class,new Storage.Data());
+        if(next.schemaVersion!=1 || next.pads==null || next.ignored==null || next.cooldowns==null) throw new IllegalStateException("Invalid Teleports migration data");
+        instance.data=next; instance.byPosition.clear(); next.pads.values().forEach(p -> instance.byPosition.put(p.key(),p));
+    }
     private void registerCommands() {
         CommandRegistrationCallback.EVENT.register((d,registry,environment) -> {
             d.register(literal("tpa").then(argument("nickname",StringArgumentType.word())
-                .suggests((c,b) -> SharedSuggestionProvider.suggest(c.getSource().getServer().getPlayerNames(),b))
+                .suggests((c,b) -> SharedSuggestionProvider.suggest(SocialBridge.names(c.getSource()),b))
                 .executes(c -> request(c.getSource().getPlayerOrException(),StringArgumentType.getString(c,"nickname")))));
             d.register(literal("confirm-tpa").executes(c -> confirm(c.getSource().getPlayerOrException())));
             for(String cmd:List.of("tpaccept","tpdeny")) {
                 boolean accept=cmd.equals("tpaccept");
                 d.register(literal(cmd).executes(c -> respond(c.getSource().getPlayerOrException(),null,accept))
-                    .then(argument("nickname",StringArgumentType.word()).suggests((c,b) -> SharedSuggestionProvider.suggest(c.getSource().getServer().getPlayerNames(),b))
+                    .then(argument("nickname",StringArgumentType.word()).suggests((c,b) -> SharedSuggestionProvider.suggest(SocialBridge.names(c.getSource()),b))
                     .executes(c -> respond(c.getSource().getPlayerOrException(),StringArgumentType.getString(c,"nickname"),accept))));
             }
             d.register(literal("ignore-tpa").executes(c -> {
@@ -186,6 +193,7 @@ public final class Teleports implements ModInitializer {
     }
     private boolean validTarget(ServerPlayer p,ServerPlayer t) {
         if(t==null) { msg(p,"Gracza o takim nicku nie ma na serwerze."); return false; }
+        if(!SocialBridge.allowed(p,t)) { msg(p,"Teleportacja między tymi graczami jest niedostępna."); return false; }
         if(p==t) { msg(p,"Nie możesz teleportować się do siebie."); return false; }
         if(data.ignored.contains(t.getUUID().toString())) { msg(p,"Ten gracz ignoruje prośby o teleportację."); return false; }
         if(!usable(t)) { msg(p,"Odbiorca jest martwy lub w trybie widza."); return false; }
@@ -260,10 +268,17 @@ public final class Teleports implements ModInitializer {
     }
     private void cancelFor(UUID id,String reason) {
         requests.entrySet().removeIf(e -> {
+            ServerPlayer a=player(e.getValue().sender),b=player(e.getValue().target);
+            if(a!=null && b!=null && !SocialBridge.allowed(a,b)) {
+                msg(a,TPA_CANCELLED,"Prośba anulowana: zmieniły się ustawienia ignorowania lub ukrycia.");
+                msg(b,TPA_CANCELLED,"Prośba anulowana: zmieniły się ustawienia ignorowania lub ukrycia."); return true;
+            }
             Request r=e.getValue(); if(!r.sender.equals(id)&&!r.target.equals(id)) return false;
             msg(player(r.sender),TPA_CANCELLED,reason); msg(player(r.target),TPA_CANCELLED,reason); return true;
         });
         confirmations.entrySet().removeIf(e -> {
+            ServerPlayer a=player(e.getKey()),b=player(e.getValue().target);
+            if(a!=null && b!=null && !SocialBridge.allowed(a,b)) { msg(a,TPA_CANCELLED,"Potwierdzenie anulowane: zmieniły się ustawienia ignorowania lub ukrycia."); return true; }
             if(e.getKey().equals(id)||e.getValue().target.equals(id)) { msg(player(e.getKey()),TPA_CANCELLED,reason); return true; } return false;
         });
         warmups.entrySet().removeIf(e -> {
@@ -283,6 +298,7 @@ public final class Teleports implements ModInitializer {
         while(it.hasNext()) {
             var entry=it.next(); ServerPlayer p=player(entry.getKey()); Warmup w=entry.getValue(); ServerPlayer t=player(w.target);
             if(p==null) { it.remove(); continue; }
+            if(t!=null && !SocialBridge.allowed(p,t)) { feedback.endCountdown(p,"tpa");msg(p,TPA_CANCELLED,"Teleportacja anulowana: zmieniły się ustawienia ignorowania lub ukrycia.");it.remove();continue; }
             if(!usable(p) || p.level()!=w.level || p.position().distanceToSqr(w.origin)>0.0001 || p.isPassenger() || p.isSleeping()) {
                 feedback.endCountdown(p,"tpa");msg(p,TPA_CANCELLED,"Teleportacja anulowana: poruszyłeś się, zmieniłeś wymiar lub nie możesz się teleportować."); it.remove(); continue;
             }
