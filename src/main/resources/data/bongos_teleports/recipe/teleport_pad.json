@@ -1,0 +1,18 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": [" S ", "SES", " S "],
+  "key": { "S": "minecraft:stone_bricks", "E": "minecraft:ender_eye" },
+  "result": {
+    "id": "minecraft:end_portal_frame", "count": 1,
+    "components": {
+      "minecraft:custom_data": { "bongos_teleports": "pad" },
+      "minecraft:item_name": { "text": "Teleporting Pad", "color": "white", "italic": false },
+      "minecraft:enchantment_glint_override": true,
+      "minecraft:lore": [
+        {"text":"Place both pads and sync them with","color":"gray","italic":false},
+        {"text":"TP Harmonizer","color":"yellow","italic":false,"extra":[{"text":".","color":"gray"}]}
+      ]
+    }
+  }
+}

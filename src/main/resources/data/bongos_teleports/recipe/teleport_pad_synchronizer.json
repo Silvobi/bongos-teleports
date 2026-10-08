@@ -1,0 +1,20 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "misc",
+  "ingredients": ["minecraft:ender_pearl", "minecraft:gold_ingot", "minecraft:redstone"],
+  "result": {
+    "id": "minecraft:ender_eye", "count": 1,
+    "components": {
+      "minecraft:custom_data": { "bongos_teleports": "synchronizer" },
+      "minecraft:item_name": { "text": "TP Harmonizer", "color": "white", "italic": false },
+      "minecraft:max_stack_size": 1,
+      "minecraft:max_damage": 10,
+      "minecraft:damage": 0,
+      "minecraft:enchantment_glint_override": true,
+      "minecraft:lore": [
+        {"text":"Syncs two ","color":"gray","italic":false,"extra":[{"text":"teleport pads","color":"yellow"},{"text":". Press [","color":"gray"},{"keybind":"key.use","color":"gray"},{"text":"]","color":"gray"}]},
+        {"text":"on first and then second pad to sync them.","color":"gray","italic":false}
+      ]
+    }
+  }
+}

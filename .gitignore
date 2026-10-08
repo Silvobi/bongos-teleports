@@ -1,0 +1,13 @@
+.gradle/
+build/
+run/
+logs/
+release/
+verification-server/
+.idea/
+.vscode/
+*.iml
+*.log
+.env
+.env.*
+!.env.example
