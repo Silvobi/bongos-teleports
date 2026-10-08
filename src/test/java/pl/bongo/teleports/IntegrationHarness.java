@@ -180,6 +180,7 @@ public final class IntegrationHarness {
         } finally { stop(); Files.write(dir.resolve("integration-server.log"),logs); }
     }
     static final class Bot implements AutoCloseable {
+        static volatile Runnable beforeAuthReply;
         final String name; UUID uuid; double x,z; int totalXp;
         final Socket socket;
         InputStream input; OutputStream output;
@@ -227,6 +228,7 @@ public final class IntegrationHarness {
                     packReply.handle(this,pack);
                 }
                 else if(packet instanceof ClientboundShowDialogPacket shown) {
+                    if(beforeAuthReply!=null)beforeAuthReply.run();
                     MultiActionDialog dialog=(MultiActionDialog)shown.dialog().value();
                     CompoundTag fields=new CompoundTag();fields.putString("password","clans-test-password");fields.putString("repeat","clans-test-password");
                     CustomAll action=(CustomAll)dialog.actions().getFirst().action().orElseThrow();

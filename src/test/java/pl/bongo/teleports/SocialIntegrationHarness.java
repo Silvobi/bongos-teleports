@@ -116,6 +116,18 @@ public final class SocialIntegrationHarness {
             Path data=dir.resolve("world/players/data");UUID aId=UUID.nameUUIDFromBytes("OfflinePlayer:sqalice_26".getBytes(java.nio.charset.StandardCharsets.UTF_8));
             UUID bId=UUID.nameUUIDFromBytes("OfflinePlayer:sqbob_26".getBytes(java.nio.charset.StandardCharsets.UTF_8));
             byte[] aBefore=Files.readAllBytes(data.resolve(aId+".dat")),bBefore=Files.readAllBytes(data.resolve(bId+".dat"));
+            var authReady=new java.util.concurrent.CountDownLatch(1);var releaseAuth=new java.util.concurrent.CountDownLatch(1);
+            var loginFailure=new java.util.concurrent.atomic.AtomicReference<Throwable>();
+            Bot.beforeAuthReply=()->{authReady.countDown();try{if(!releaseAuth.await(10,java.util.concurrent.TimeUnit.SECONDS))throw new AssertionError("Auth hold timed out");}
+                catch(InterruptedException e){throw new IllegalStateException(e);}};
+            Thread pendingLogin=new Thread(()->{try(Bot pending=new Bot("SQAlice_26","pl_pl")){}catch(Throwable e){loginFailure.set(e);}});
+            try {
+                pendingLogin.start();check(authReady.await(8,java.util.concurrent.TimeUnit.SECONDS),"login is held before authentication reply");
+                cmd("bongoutils migrate swap SQAlice_26 SQBob_26");log("w trakcie logowania lub konfiguracji");
+                check(Arrays.equals(aBefore,Files.readAllBytes(data.resolve(aId+".dat")))&&Arrays.equals(bBefore,Files.readAllBytes(data.resolve(bId+".dat"))),"migration refuses a pending login without changing either save");
+            } finally {Bot.beforeAuthReply=null;releaseAuth.countDown();pendingLogin.join(8000);}
+            if(loginFailure.get()!=null)throw new AssertionError("Pending login failed",loginFailure.get());
+            Thread.sleep(400);aBefore=Files.readAllBytes(data.resolve(aId+".dat"));bBefore=Files.readAllBytes(data.resolve(bId+".dat"));
             cmd("bongoutils migrate move SQAlice_26 SQBob_26");log("Nick docelowy ma dane");
             check(Arrays.equals(aBefore,Files.readAllBytes(data.resolve(aId+".dat"))) && Arrays.equals(bBefore,Files.readAllBytes(data.resolve(bId+".dat"))),"MOVE refuses occupied target without changing files");
             cmd("bongoutils migrate swap SQAlice_26 SQBob_26");log("Migracja SWAP zakończona");
