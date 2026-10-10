@@ -1,4 +1,4 @@
-# Bongo's Teleports 1.3.0
+# Bongo's Teleports 1.3.1
 
 
 ## Autorstwo AI / AI disclosure
@@ -11,7 +11,7 @@ Mod wyłącznie na serwer Fabric Minecraft **26.3**, Java 25, Fabric Loader 0.19
 
 ## Instalacja
 
-Umieść `BongosTeleports-1.3.0.jar` w `mods/`, usuń starszy JAR tego moda z `mods/` i uruchom ponownie serwer. Fabric API jest wymagane i już znajduje się na serwerze testowym Bongo. Plik konfiguracyjny to `config/bongos-teleports.json`. Operator poziomu 2+ może wczytać zmiany przez `/bongoteleports reload`. Przeładowanie anuluje oczekujące teleportacje, w tym odliczania padów, aby nowe parametry nie zmieniły zaakceptowanej teleportacji.
+Umieść `BongosTeleports-1.3.1.jar` w `mods/`, usuń starszy JAR tego moda z `mods/` i uruchom ponownie serwer. Fabric API jest wymagane i już znajduje się na serwerze testowym Bongo. Plik konfiguracyjny to `config/bongos-teleports.json`. Operator poziomu 2+ może wczytać zmiany przez `/bongoteleports reload`. Przeładowanie anuluje oczekujące teleportacje, w tym odliczania padów, aby nowe parametry nie zmieniły zaakceptowanej teleportacji.
 
 ## Prośby o teleportację
 
@@ -40,7 +40,7 @@ Nazwy i lore obu przedmiotów automatycznie dopasowują się do języka klienta:
 | Polski | Pad Teleportacyjny | Harmonizator TP |
 | Angielski | Teleporting Pad | TP Harmonizer |
 
-Pozostałe języki otrzymują angielskie nazwy i opisy. Obsługa PL/EN w tej wersji obejmuje nazwy i lore przedmiotów, w tym informacje o wybranym padzie. Dwie osoby oglądające ten sam przedmiot we wspólnej skrzyni widzą swój język. Zmiana języka odświeża otwarte okno bez ponownego logowania. Crafting, ekwipunek oraz wcześniej utworzone przedmioty używają tych samych nazw.
+Pozostałe języki otrzymują angielskie nazwy i opisy. Obsługa PL/EN obejmuje nazwy i lore przedmiotów, wszystkie komunikaty TPA i padów, odliczanie, pomoc oraz odpowiedzi przeładowania konfiguracji. Każdy odbiorca dostaje swój język (`pl_*` → polski, pozostałe → angielski); dotyczy to także dwóch osób uczestniczących w jednej prośbie. Kolejne wyświetlenia odliczania i komunikatów nad paskiem skrótów uwzględniają zmianę języka bez ponownego logowania. Szczegóły błędów konfiguracji trafiają do logu, a gracz dostaje przetłumaczony komunikat. Katalogi: `src/main/resources/bongos_teleports/lang/`. Dwie osoby oglądające ten sam przedmiot we wspólnej skrzyni widzą swój język. Zmiana języka odświeża otwarte okno bez ponownego logowania. Crafting, ekwipunek oraz wcześniej utworzone przedmioty używają tych samych nazw.
 
 Lore Pada Teleportacyjnego:
 
@@ -112,7 +112,7 @@ Pady utworzone w wersji 1.0.0 zachowują swoje połączenia. Stare synchronizery
 
 ## Budowanie i testy
 
-Z JDK 25: `gradlew.bat build`. Wynik: `build/libs/BongosTeleports-1.3.0.jar`, dodatkowo JAR źródeł. Przed pierwszym testem integracyjnym uruchom `./prepare-verification.ps1 -ServerPath 'C:\ścieżka\do\serwera'`, a następnie `gradlew.bat integrationTest feedbackTest durabilityTest languageTest`. Testy używają osobnego katalogu `verification-server`, lokalnego portu 25582 i klientów protokołu vanilla. W tej kopii mod BongoUtils jest odsuwany do `external-auth-mods`, aby logowanie klientów testowych nie zależało od zewnętrznego API Mojang; serwer docelowy zachowuje ten mod. Środowisko testowe ma skrócone czasy; docelowy config zachowuje domyślne 5 i 60 sekund. Nie używaj świata produkcyjnego w katalogu weryfikacji: test resetuje dane teleportów i modyfikuje swój świat.
+Z JDK 25: `gradlew.bat build`. Wynik: `build/libs/BongosTeleports-1.3.1.jar`, dodatkowo JAR źródeł. Przed pierwszym testem integracyjnym uruchom `./prepare-verification.ps1 -ServerPath 'C:\ścieżka\do\serwera'`, a następnie `gradlew.bat integrationTest feedbackTest durabilityTest languageTest`. Testy używają osobnego katalogu `verification-server`, lokalnego portu 25582 i klientów protokołu vanilla. W tej kopii mod BongoUtils jest odsuwany do `external-auth-mods`, aby logowanie klientów testowych nie zależało od zewnętrznego API Mojang; serwer docelowy zachowuje ten mod. Środowisko testowe ma skrócone czasy; docelowy config zachowuje domyślne 5 i 60 sekund. Nie używaj świata produkcyjnego w katalogu weryfikacji: test resetuje dane teleportów i modyfikuje swój świat.
 
 Plik `teleports-verification.jar` służy wyłącznie testom craftingu; nie instalować go na docelowym serwerze.
 

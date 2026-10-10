@@ -86,6 +86,18 @@ public final class LanguageHarness {
                 var moved=(ClientboundContainerSetSlotPacket)en.await(e->e instanceof ClientboundContainerSetSlotPacket c && c.getContainerId()==ce.containerId() && c.getSlot()==2 && Teleports.is(c.getItem(),"pad"),5000);
                 check(moved.getItem().getCount()==2 && moved.getItem().get(DataComponents.ITEM_NAME).getString().equals("Teleporting Pad"),"moving the shared stack preserves both items and viewer-local text");
                 pl.send(new ServerboundContainerClosePacket(cp.containerId()));en.send(new ServerboundContainerClosePacket(ce.containerId()));
+                pl.send(new ServerboundClientInformationPacket(new ClientInformation("pl_pl",2,ChatVisiblity.FULL,true,127,HumanoidArm.RIGHT,false,true,ParticleStatus.ALL)));
+                at(pl,5.5,3.5);at(en,75.5,3.5);cmd("experience add ItemPL 100 points");
+                pl.events.clear();en.events.clear();pl.command("tpa ItemEN");
+                FeedbackHarness.alert(pl,"Wysłano prośbę do ItemEN",true,"Polish sender receives a localized request confirmation");
+                FeedbackHarness.alert(en,"ItemPL wants to teleport to you.",false,"English recipient receives localized request instructions");
+                pl.command("tpacancel");
+                FeedbackHarness.alert(pl,"Teleportacja anulowana.",true,"sender cancellation remains Polish");
+                FeedbackHarness.alert(en,"ItemPL cancelled the request.",true,"shared cancellation is English for the recipient");
+                pl.events.clear();pl.command("tpa MissingLangUser");
+                FeedbackHarness.alert(pl,"Gracza o takim nicku nie ma na serwerze.",true,"ordinary error begins in Polish");
+                pl.send(new ServerboundClientInformationPacket(new ClientInformation("de_de",2,ChatVisiblity.FULL,true,127,HumanoidArm.RIGHT,false,true,ParticleStatus.ALL)));
+                FeedbackHarness.alert(pl,"No player with that username is on the server.",true,"queued action-bar resend follows the new non-Polish language without reconnecting");
             }
         } finally { stop(); }
     }
