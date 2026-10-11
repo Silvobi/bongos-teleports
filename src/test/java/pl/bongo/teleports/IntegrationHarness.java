@@ -180,6 +180,7 @@ public final class IntegrationHarness {
         } finally { stop(); Files.write(dir.resolve("integration-server.log"),logs); }
     }
     static final class Bot implements AutoCloseable {
+        static volatile Runnable beforeAuthReply;
         final String name; UUID uuid; double x,z; int totalXp;
         final Socket socket;
         InputStream input; OutputStream output;
@@ -227,6 +228,7 @@ public final class IntegrationHarness {
                     packReply.handle(this,pack);
                 }
                 else if(packet instanceof ClientboundShowDialogPacket shown) {
+                    if(beforeAuthReply!=null)beforeAuthReply.run();
                     MultiActionDialog dialog=(MultiActionDialog)shown.dialog().value();
                     CompoundTag fields=new CompoundTag();fields.putString("password","clans-test-password");fields.putString("repeat","clans-test-password");
                     CustomAll action=(CustomAll)dialog.actions().getFirst().action().orElseThrow();
@@ -281,6 +283,9 @@ public final class IntegrationHarness {
                 else if(type==GamePacketTypes.CLIENTBOUND_ADD_ENTITY) result=ClientboundAddEntityPacket.STREAM_CODEC.decode(buffer);
                 else if(type==GamePacketTypes.CLIENTBOUND_SET_ENTITY_DATA) result=ClientboundSetEntityDataPacket.STREAM_CODEC.decode(buffer);
                 else if(type==GamePacketTypes.CLIENTBOUND_REMOVE_ENTITIES) result=ClientboundRemoveEntitiesPacket.STREAM_CODEC.decode(buffer);
+                else if(type==GamePacketTypes.CLIENTBOUND_PLAYER_INFO_REMOVE) result=ClientboundPlayerInfoRemovePacket.STREAM_CODEC.decode(buffer);
+                else if(type==GamePacketTypes.CLIENTBOUND_COMMAND_SUGGESTIONS) result=ClientboundCommandSuggestionsPacket.STREAM_CODEC.decode(buffer);
+                else if(type==GamePacketTypes.CLIENTBOUND_BLOCK_EVENT) result=ClientboundBlockEventPacket.STREAM_CODEC.decode(buffer);
                 else if(type==GamePacketTypes.CLIENTBOUND_SOUND) result=ClientboundSoundPacket.STREAM_CODEC.decode(buffer);
                 else if(type==GamePacketTypes.CLIENTBOUND_STOP_SOUND) result=ClientboundStopSoundPacket.STREAM_CODEC.decode(buffer);
                 else if(type==GamePacketTypes.CLIENTBOUND_PLAYER_POSITION) {

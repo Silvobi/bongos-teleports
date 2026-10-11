@@ -129,16 +129,23 @@ public final class Teleports implements ModInitializer {
             p instanceof ServerPlayer sp && clearSynchronizer(sp) ? InteractionResult.FAIL : InteractionResult.PASS);
     }
     private void save() { Storage.write(dataPath,data); }
+    public static void migrationSave() { if(instance!=null && instance.data!=null) instance.save(); }
+    public static void migrationReload() {
+        if(instance==null || instance.data==null) return;
+        Storage.Data next=Storage.read(instance.dataPath,Storage.Data.class,new Storage.Data());
+        if(next.schemaVersion!=1 || next.pads==null || next.ignored==null || next.cooldowns==null) throw new IllegalStateException("Invalid Teleports migration data");
+        instance.data=next; instance.byPosition.clear(); next.pads.values().forEach(p -> instance.byPosition.put(p.key(),p));
+    }
     private void registerCommands() {
         CommandRegistrationCallback.EVENT.register((d,registry,environment) -> {
             d.register(literal("tpa").then(argument("nickname",StringArgumentType.word())
-                .suggests((c,b) -> SharedSuggestionProvider.suggest(c.getSource().getServer().getPlayerNames(),b))
+                .suggests((c,b) -> SharedSuggestionProvider.suggest(SocialBridge.names(c.getSource()),b))
                 .executes(c -> request(c.getSource().getPlayerOrException(),StringArgumentType.getString(c,"nickname")))));
             d.register(literal("confirm-tpa").executes(c -> confirm(c.getSource().getPlayerOrException())));
             for(String cmd:List.of("tpaccept","tpdeny")) {
                 boolean accept=cmd.equals("tpaccept");
                 d.register(literal(cmd).executes(c -> respond(c.getSource().getPlayerOrException(),null,accept))
-                    .then(argument("nickname",StringArgumentType.word()).suggests((c,b) -> SharedSuggestionProvider.suggest(c.getSource().getServer().getPlayerNames(),b))
+                    .then(argument("nickname",StringArgumentType.word()).suggests((c,b) -> SharedSuggestionProvider.suggest(SocialBridge.names(c.getSource()),b))
                     .executes(c -> respond(c.getSource().getPlayerOrException(),StringArgumentType.getString(c,"nickname"),accept))));
             }
             d.register(literal("ignore-tpa").executes(c -> {
@@ -187,6 +194,7 @@ public final class Teleports implements ModInitializer {
     }
     private boolean validTarget(ServerPlayer p,ServerPlayer t) {
         if(t==null) { msg(p,Lang.message("player_missing")); return false; }
+        if(!SocialBridge.allowed(p,t)) { msg(p,Lang.message("social_unavailable")); return false; }
         if(p==t) { msg(p,Lang.message("self_teleport")); return false; }
         if(data.ignored.contains(t.getUUID().toString())) { msg(p,Lang.message("target_ignored")); return false; }
         if(!usable(t)) { msg(p,Lang.message("target_unavailable")); return false; }
@@ -261,10 +269,17 @@ public final class Teleports implements ModInitializer {
     }
     private void cancelFor(UUID id,Lang.Message reason) {
         requests.entrySet().removeIf(e -> {
+            ServerPlayer a=player(e.getValue().sender),b=player(e.getValue().target);
+            if(a!=null && b!=null && !SocialBridge.allowed(a,b)) {
+                msg(a,TPA_CANCELLED,Lang.message("social_request_cancelled"));
+                msg(b,TPA_CANCELLED,Lang.message("social_request_cancelled")); return true;
+            }
             Request r=e.getValue(); if(!r.sender.equals(id)&&!r.target.equals(id)) return false;
             msg(player(r.sender),TPA_CANCELLED,reason); msg(player(r.target),TPA_CANCELLED,reason); return true;
         });
         confirmations.entrySet().removeIf(e -> {
+            ServerPlayer a=player(e.getKey()),b=player(e.getValue().target);
+            if(a!=null && b!=null && !SocialBridge.allowed(a,b)) { msg(a,TPA_CANCELLED,Lang.message("social_confirmation_cancelled")); return true; }
             if(e.getKey().equals(id)||e.getValue().target.equals(id)) { msg(player(e.getKey()),TPA_CANCELLED,reason); return true; } return false;
         });
         warmups.entrySet().removeIf(e -> {
@@ -284,6 +299,7 @@ public final class Teleports implements ModInitializer {
         while(it.hasNext()) {
             var entry=it.next(); ServerPlayer p=player(entry.getKey()); Warmup w=entry.getValue(); ServerPlayer t=player(w.target);
             if(p==null) { it.remove(); continue; }
+            if(t!=null && !SocialBridge.allowed(p,t)) { feedback.endCountdown(p,"tpa");msg(p,TPA_CANCELLED,Lang.message("social_teleport_cancelled"));it.remove();continue; }
             if(!usable(p) || p.level()!=w.level || p.position().distanceToSqr(w.origin)>0.0001 || p.isPassenger() || p.isSleeping()) {
                 feedback.endCountdown(p,"tpa");msg(p,TPA_CANCELLED,Lang.message("movement_cancelled")); it.remove(); continue;
             }
