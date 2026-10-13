@@ -8,6 +8,22 @@ import java.nio.file.*;
 public final class RecipeVerification implements ModInitializer {
     public void onInitialize() {
         net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback.EVENT.register((dispatcher,registry,environment)-> {
+            dispatcher.register(net.minecraft.commands.Commands.literal("verify-social-mob")
+                .requires(s->s.getEntity()==null)
+                .then(net.minecraft.commands.Commands.argument("nick",com.mojang.brigadier.arguments.StringArgumentType.word()).executes(c->{
+                    var p=c.getSource().getServer().getPlayerList().getPlayerByName(com.mojang.brigadier.arguments.StringArgumentType.getString(c,"nick"));
+                    if(p==null)return 0;
+                    try {
+                    var mob=net.minecraft.world.entity.EntityTypes.ZOMBIE.create(p.level(),net.minecraft.world.entity.EntitySpawnReason.COMMAND);
+                    if(mob==null)throw new IllegalStateException("The mob fixture requires a non-peaceful test difficulty");
+                    mob.setPos(p.getX()+1,p.getY(),p.getZ());mob.setTarget(p);
+                    boolean seen=net.minecraft.world.entity.ai.targeting.TargetingConditions.forNonCombat().test(p.level(),mob,p);
+                    c.getSource().sendSuccess(()->net.minecraft.network.chat.Component.literal("SOCIAL-MOB: seen="+seen+" target="+(mob.getTarget()==p)+" pickable="+p.isPickable()+" pushable="+p.isPushable()),false);return 1;
+                    } catch (RuntimeException error) {
+                        org.slf4j.LoggerFactory.getLogger("social-verification").error("Social mob verification failed",error);
+                        throw error;
+                    }
+                })));
             dispatcher.register(net.minecraft.commands.Commands.literal("verify-feedback-craft")
                 .requires(net.minecraft.commands.Commands.hasPermission(net.minecraft.commands.Commands.LEVEL_GAMEMASTERS))
                 .then(net.minecraft.commands.Commands.argument("kind",com.mojang.brigadier.arguments.StringArgumentType.word()).executes(c -> {
