@@ -25,6 +25,8 @@ Test współpracy z Utils i Community Clans jest w `socialIntegrationTest`. Wyma
 .\gradlew.bat socialIntegrationTest "-PsocialServer=C:\TEST_SERVER" "-PutilsJar=C:\BongoUtils-1.4.1.jar"
 ```
 
+`spectatorIntegrationTest` sprawdza maskowanie prawdziwego trybu obserwatora w Utils 1.4.2: dane TAB i sterowanie właściciela, nowego odbiorcę, innego obserwatora, zmianę wymiaru, ponowne wejście oraz wyjście z obserwatora. Wymaga osobnej kopii serwera na porcie 25585 z plikiem `.bongo-spectator-test`. Uruchom: `gradlew.bat spectatorIntegrationTest "-PspectatorServer=C:\SPECTATOR_TEST_SERVER" "-PutilsJar=C:\BongoUtils-1.4.2.jar"`.
+
 Mod wyłącznie na serwer Fabric Minecraft **26.3**, Java 25, Fabric Loader 0.19.5+, Fabric API 0.161.0+26.3. Klientowi wystarczy vanilla 26.3. Nie wymaga paczki zasobów ani moda klientowego.
 
 ## Instalacja

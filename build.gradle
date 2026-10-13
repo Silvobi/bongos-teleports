@@ -89,3 +89,15 @@ tasks.register('socialIntegrationTest', JavaExec) {
         if (project.hasProperty('utilsJar')) copy { from file(project.property('utilsJar')); into new File(target, 'mods') }
     }
 }
+
+tasks.register('spectatorIntegrationTest', JavaExec) {
+    dependsOn testClasses, jar, verificationJar
+    classpath = sourceSets.test.runtimeClasspath
+    mainClass = 'pl.bongo.teleports.SpectatorIntegrationHarness'
+    args(project.findProperty('spectatorServer') ?: 'verification-server')
+    doFirst {
+        def target = file(project.findProperty('spectatorServer') ?: 'verification-server')
+        copy { from tasks.jar.archiveFile; from tasks.verificationJar.archiveFile; into new File(target, 'mods') }
+        if (project.hasProperty('utilsJar')) copy { from file(project.property('utilsJar')); into new File(target, 'mods') }
+    }
+}
