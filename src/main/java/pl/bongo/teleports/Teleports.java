@@ -41,6 +41,8 @@ public final class Teleports implements ModInitializer {
     private Storage.Config config;
     private final Feedback feedback=new Feedback(()->config);
     private Storage.Data data;
+    private ClaimProtection claims;
+    private boolean claimErrorLogged;
     private Path dataPath;
     private MinecraftServer server;
     private final Map<UUID,Request> requests=new HashMap<>();
@@ -82,14 +84,16 @@ public final class Teleports implements ModInitializer {
             Feedback.validateRegistry(config.sounds);Storage.write(configPath,config);
             server=s; dataPath=s.getWorldPath(LevelResource.ROOT).resolve("bongos-teleports.json");
             data=Storage.read(dataPath,Storage.Data.class,new Storage.Data());
-            if(data.schemaVersion!=1 || data.pads==null || data.ignored==null || data.cooldowns==null)
+            if(data.schemaVersion!=1 || data.pads==null || data.ignored==null || data.cooldowns==null || data.publicPadClaims==null)
                 throw new IllegalStateException("Nieprawidłowy plik danych teleportów: "+dataPath);
+            claims=ClaimProtection.detect(data.publicPadClaims,LOG);
+            claims.prune();
             data.pads.values().forEach(p -> byPosition.put(p.key(),p));
             LOG.info("Bongo's Teleports ready: {} pads",data.pads.size());
         });
         ServerLifecycleEvents.SERVER_STOPPING.register(s -> { if(data!=null) save(); });
         ServerLifecycleEvents.SERVER_STOPPED.register(s -> {
-            server=null; data=null; requests.clear(); confirmations.clear(); warmups.clear();
+            server=null; data=null; claims=null; claimErrorLogged=false; requests.clear(); confirmations.clear(); warmups.clear();
             byPosition.clear(); onPad.clear(); padWarmups.clear(); padLocks.clear();
             feedback.clear();
         });
@@ -118,7 +122,7 @@ public final class Teleports implements ModInitializer {
             if(!usable(sp) || sp.gameMode.getGameModeForPlayer().isBlockPlacingRestricted()) return InteractionResult.FAIL;
             if(!pad.owner.equals(sp.getUUID().toString())) msg(sp,PAD_ERROR,"Ten pad należy do innego gracza.");
             else if(!sp.isShiftKeyDown()) msg(sp,PAD_ERROR,"Aby podnieść pad, przytrzymaj Shift i kliknij go lewym przyciskiem.");
-            else {
+            else if(claimAllowed(sp,sp.level(),bp,ClaimProtection.Trust.BUILD,false,PAD_ERROR)) {
                 unlink(pad); data.pads.remove(pad.id); byPosition.remove(pad.key());
                 sp.level().setBlockAndUpdate(bp,Blocks.AIR.defaultBlockState()); save();
                 Block.popResource(sp.level(),bp,item("pad")); padMsg(sp,PAD_PICKED_UP,"Pad podniesiony. Połączenie usunięte.",pad);
@@ -128,7 +132,30 @@ public final class Teleports implements ModInitializer {
         AttackEntityCallback.EVENT.register((p,l,hand,entity,hit) ->
             p instanceof ServerPlayer sp && clearSynchronizer(sp) ? InteractionResult.FAIL : InteractionResult.PASS);
     }
-    private void save() { Storage.write(dataPath,data); }
+    private void save() {
+        if(claims!=null) claims.prune();
+        Storage.write(dataPath,data);
+    }
+    private boolean claimAllowed(ServerPlayer p,ServerLevel level,BlockPos bp,ClaimProtection.Trust trust,boolean padTeleport,Feedback.Event event) {
+        try {
+            if(level!=null && claims.allows(p,level,bp,trust,padTeleport)) return true;
+            msg(p,event,trust==ClaimProtection.Trust.BUILD
+                ? "GriefPrevention3D: brak Build Trust do zarządzania padem w tej działce."
+                : "GriefPrevention3D: teleportacja zablokowana — brak Access Trust w miejscu docelowym.");
+        } catch(RuntimeException e) {
+            if(!claimErrorLogged) { LOG.error("Claim protection failed; operation denied",e); claimErrorLogged=true; }
+            msg(p,event,"Błąd integracji GriefPrevention3D; operacja zablokowana.");
+        }
+        return false;
+    }
+    private int publicPads(ServerPlayer p,Boolean enabled) {
+        try {
+            String key=claims.managedClaim(p,p.level().dimension().identifier().toString(),p.blockPosition());
+            if(enabled!=null) { claims.setPublic(key,enabled); save(); }
+            msg(p,CONFIG_RELOADED,"Publiczne pady w tej działce/poddziałce: "+(claims.isPublic(key)?"WŁĄCZONE":"WYŁĄCZONE")+".");
+            return 1;
+        } catch(RuntimeException e) { msg(p,CONFIG_ERROR,e.getMessage()); return 0; }
+    }
     private void registerCommands() {
         CommandRegistrationCallback.EVENT.register((d,registry,environment) -> {
             d.register(literal("tpa").then(argument("nickname",StringArgumentType.word())
@@ -156,8 +183,13 @@ public final class Teleports implements ModInitializer {
                 msg(p,r!=null||cancelled||warming?TPA_CANCELLED:TPA_ERROR,r!=null||cancelled||warming?"Teleportacja anulowana.":"Brak aktywnej teleportacji."); return 1;
             }));
             d.register(literal("bongoteleports").executes(c -> {
-                c.getSource().sendSuccess(() -> Component.literal("/tpa <nick>, /tpaccept [nick], /tpdeny [nick], /confirm-tpa, /ignore-tpa, /tpacancel. Pady: PPM harmonizatorem; wejdź, aby teleportować; Shift+LPM podnosi własny pad."),false); return 1;
-            }).then(literal("reload").requires(Commands.hasPermission(Commands.LEVEL_GAMEMASTERS)).executes(c -> {
+                c.getSource().sendSuccess(() -> Component.literal("/tpa <nick>, /tpaccept [nick], /tpdeny [nick], /confirm-tpa, /ignore-tpa, /tpacancel. Pady: PPM harmonizatorem; wejdź, aby teleportować; Shift+LPM podnosi własny pad. Publiczne pady w działce: /bongoteleports publicpads on|off|status."),false); return 1;
+            }).then(literal("publicpads")
+                .executes(c -> publicPads(c.getSource().getPlayerOrException(),null))
+                .then(literal("status").executes(c -> publicPads(c.getSource().getPlayerOrException(),null)))
+                .then(literal("on").executes(c -> publicPads(c.getSource().getPlayerOrException(),true)))
+                .then(literal("off").executes(c -> publicPads(c.getSource().getPlayerOrException(),false))))
+            .then(literal("reload").requires(Commands.hasPermission(Commands.LEVEL_GAMEMASTERS)).executes(c -> {
                 try {
                     Storage.Config next=Storage.read(configPath,Storage.Config.class,new Storage.Config()); next.validate();Feedback.validateRegistry(next.sounds);
                     config=next;
@@ -193,7 +225,7 @@ public final class Teleports implements ModInitializer {
         if(Math.hypot(p.getX()-t.getX(),p.getZ()-t.getZ())<config.tooCloseDistanceMeters) {
             msg(p,"Zbyt blisko, aby się teleportować. Minimalna odległość: "+config.tooCloseDistanceMeters+" m (X/Z)."); return false;
         }
-        return true;
+        return claimAllowed(p,t.level(),t.blockPosition(),ClaimProtection.Trust.ACCESS,false,TPA_ERROR);
     }
     private int cost(ServerPlayer p,ServerPlayer t) { return Rules.cost(p.getX(),p.getZ(),t.getX(),t.getZ(),config.xpCostEnabled,config.xpPerMeter); }
     static long xp(ServerPlayer p) {
@@ -405,6 +437,7 @@ public final class Teleports implements ModInitializer {
             || !l.getEntities(null,new net.minecraft.world.phys.AABB(bp)).isEmpty()) {
             msg(p,PAD_ERROR,"Nie można postawić pada: potrzeba wolnego miejsca i stabilnego podłoża."); return;
         }
+        if(!claimAllowed(p,l,bp,ClaimProtection.Trust.BUILD,false,PAD_ERROR)) return;
         Storage.Pad pad=new Storage.Pad(p.getUUID().toString(),dim(l),bp.getX(),bp.getY(),bp.getZ());
         if(!l.setBlockAndUpdate(bp,Blocks.END_PORTAL_FRAME.defaultBlockState())) { msg(p,PAD_ERROR,"Nie udało się postawić pada."); return; }
         data.pads.put(pad.id,pad); byPosition.put(pad.key(),pad); save();
@@ -425,6 +458,7 @@ public final class Teleports implements ModInitializer {
         if(!usable(p)) return;
         normalizeSynchronizer(stack);
         if(!pad.owner.equals(p.getUUID().toString())) { msg(p,PAD_ERROR,"Możesz synchronizować tylko własne pady."); return; }
+        if(!claimAllowed(p,level(pad),pos(pad),ClaimProtection.Trust.BUILD,false,PAD_ERROR)) return;
         CompoundTag tag=stack.getOrDefault(DataComponents.CUSTOM_DATA,CustomData.EMPTY).copyTag();
         String selected=tag.getStringOr("selected",""); Storage.Pad first=data.pads.get(selected);
         if(first==null) {
@@ -436,6 +470,7 @@ public final class Teleports implements ModInitializer {
         if(!first.owner.equals(p.getUUID().toString())) { msg(p,PAD_ERROR,"Pierwszy pad należy do innego gracza."); return; }
         if(!exists(first) || !exists(pad)) { msg(p,PAD_ERROR,"Jeden z padów już nie istnieje. Wybierz pierwszy pad ponownie."); resetSynchronizer(stack); return; }
         if(!config.padsAllowCrossDimension && !first.dimension.equals(pad.dimension)) { msg(p,PAD_ERROR,"Pady muszą być w tym samym wymiarze."); return; }
+        if(!claimAllowed(p,level(first),pos(first),ClaimProtection.Trust.BUILD,false,PAD_ERROR)) return;
         unlink(first); unlink(pad); first.partner=pad.id; pad.partner=first.id; save();
         resetSynchronizer(stack);
         int damage=stack.getDamageValue()+1;
@@ -504,6 +539,10 @@ public final class Teleports implements ModInitializer {
         if(!exists(pad) || !exists(target)) { unlink(pad); save(); msg(p,PAD_ERROR,"Połączenie pada jest nieaktualne."); return; }
         if(!config.padsAllowCrossDimension && !pad.dimension.equals(target.dimension)) { cancelPad(p,"Teleportacja między wymiarami jest wyłączona."); msg(p,PAD_ERROR,"Teleportacja między wymiarami jest wyłączona."); return; }
         if(busy(pad.id,id) || busy(target.id,id)) { msg(p,PAD_ERROR,"Para padów odlicza teleportację innego gracza."); return; }
+        ServerLevel l=level(target); Vec3 destination=new Vec3(target.x+.5,target.y+1,target.z+.5);
+        if(!claimAllowed(p,l,BlockPos.containing(destination),ClaimProtection.Trust.ACCESS,true,PAD_ERROR)) {
+            cancelPad(p,"Teleportacja przez pad anulowana: brak dostępu do działki docelowej."); return;
+        }
         boolean started=w==null;
         if(started) {
             w=new PadWarmup(pad.id,target.id,time+1000L*config.padWarmupSeconds);
@@ -515,7 +554,6 @@ public final class Teleports implements ModInitializer {
         }
         padWarmups.remove(id);
         feedback.endCountdown(p,"pad");
-        ServerLevel l=level(target); Vec3 destination=new Vec3(target.x+.5,target.y+1,target.z+.5);
         if(!safe(p,l,destination)) { msg(p,PAD_ERROR,"Teleportacja zablokowana: nad drugim padem nie ma bezpiecznego miejsca."); return; }
         ServerLevel originLevel=p.level();Vec3 origin=p.position();
         if(teleport(p,l,destination)) {

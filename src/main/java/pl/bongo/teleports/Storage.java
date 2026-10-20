@@ -49,6 +49,7 @@ final class Storage {
         int schemaVersion = 1;
         Map<String,Pad> pads = new HashMap<>();
         Set<String> ignored = new HashSet<>();
+        Set<String> publicPadClaims = new HashSet<>();
         Map<String,Long> cooldowns = new HashMap<>();
     }
     static <T> T read(Path path, Class<T> type, T defaults) {

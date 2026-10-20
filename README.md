@@ -1,4 +1,4 @@
-# Bongo's Teleports 1.3.0
+# Bongo's Teleports 1.4.0
 
 
 ## Autorstwo AI / AI disclosure
@@ -11,7 +11,7 @@ Mod wyłącznie na serwer Fabric Minecraft **26.3**, Java 25, Fabric Loader 0.19
 
 ## Instalacja
 
-Umieść `BongosTeleports-1.3.0.jar` w `mods/`, usuń starszy JAR tego moda z `mods/` i uruchom ponownie serwer. Fabric API jest wymagane i już znajduje się na serwerze testowym Bongo. Plik konfiguracyjny to `config/bongos-teleports.json`. Operator poziomu 2+ może wczytać zmiany przez `/bongoteleports reload`. Przeładowanie anuluje oczekujące teleportacje, w tym odliczania padów, aby nowe parametry nie zmieniły zaakceptowanej teleportacji.
+Umieść `BongosTeleports-1.4.0.jar` w `mods/`, usuń starszy JAR tego moda z `mods/` i uruchom ponownie serwer. Fabric API jest wymagane i już znajduje się na serwerze testowym Bongo. Plik konfiguracyjny to `config/bongos-teleports.json`. Operator poziomu 2+ może wczytać zmiany przez `/bongoteleports reload`. Przeładowanie anuluje oczekujące teleportacje, w tym odliczania padów, aby nowe parametry nie zmieniły zaakceptowanej teleportacji.
 
 ## Prośby o teleportację
 
@@ -84,9 +84,40 @@ Kolory particlesów nad padem określają stan pracy:
 
 Po teleportacji **cała para** jest niedostępna dla wszystkich, dopóki teleportowany gracz nie opuści koła o promieniu **1 m od środka pada w X/Z**. Wysokość Y nie jest liczona. Samo zejście z bloku może być niewystarczające; trzeba oddalić się o więcej niż 1 m. Nie ma dodatkowego czasowego cooldownu padów. W czasie odliczania para jest zajęta przez jednego gracza. Śmierć lub rozłączenie gracza zwalnia blokadę; odliczania i blokady nie są odtwarzane po restarcie.
 
-Pady mogą łączyć różne wymiary. Teleportacja przez pady jest darmowa, niezależna od cooldownu TPA i dostępna wszystkim graczom. Łączenie i podnoszenie jest dostępne właścicielowi. Aby podnieść własny pad, użyj **Shift + lewy przycisk**; pad wypada jako przedmiot, a połączenie w obu kierunkach znika. Połączenie nowych padów usuwa ich poprzednie połączenia. Kliknięcie wybranego pierwszego pada drugi raz czyści wybór w synchronizerze.
+Pady mogą łączyć różne wymiary. Teleportacja przez pady jest darmowa i niezależna od cooldownu TPA. Z GriefPrevention3D wymaga Access Trust w docelowej działce lub włączenia jej flagi publicznych padów; bez GP3D jest dostępna wszystkim graczom. Łączenie i podnoszenie jest dostępne właścicielowi. Aby podnieść własny pad, użyj **Shift + lewy przycisk**; pad wypada jako przedmiot, a połączenie w obu kierunkach znika. Połączenie nowych padów usuwa ich poprzednie połączenia. Kliknięcie wybranego pierwszego pada drugi raz czyści wybór w synchronizerze.
 
 Pady są odporne na tłoki i eksplozje. Nie można dodawać do nich oczu Endu. Mod sprawdza istnienie obu padów i bezpieczne miejsce docelowe; zasłonięcie miejsca lądowania blokuje teleportację. Docelowy chunk jest wczytywany na czas przejścia. Aby podnieść pad przez Shift + LPM, trzymaj inny przedmiot lub pustą rękę — z synchronizerem ten gest czyści jego wybór.
+
+## GriefPrevention3D — od wersji 1.4.0
+
+Opcjonalna integracja z [GriefPrevention3D](https://github.com/castledking/GriefPrevention3D), sprawdzona z uniwersalnym JAR-em **19.0.0** na Fabric **26.3**. Umieść oba mody w `mods/`. Integracja włącza się automatycznie; bez GP3D dotychczasowe działanie moda pozostaje dostępne. GP3D nie jest dołączone do JAR-a Bongo Teleports. Wykrycie GP3D z niedostępnym lub niezgodnym API zatrzymuje start integracji/serwera zamiast pomijać ochronę. Błąd odczytu uprawnień podczas gry blokuje daną operację.
+
+| Operacja | Wymagane prawo GP3D |
+| --- | --- |
+| Stawianie pada | Build Trust w miejscu bloku |
+| Podnoszenie własnego pada | Build Trust w miejscu bloku oraz własność pada |
+| Wybór i synchronizacja własnych padów | Build Trust przy obu padach, ponownie sprawdzany przed połączeniem |
+| TPA | Access Trust teleportowanego gracza w miejscu docelowym |
+| Teleportacja przez pad | Access Trust w miejscu lądowania **lub** publiczne pady w tej działce/poddziałce |
+| Zmiana flagi publicznych padów | Właściciel lub Manage Trust, zgodnie z regułami GP3D |
+
+Sprawdzenia korzystają z silnika trustów GP3D: uwzględniają publiczne i indywidualne trusty, uprawnienia, odmowy, dziedziczenie, ograniczone i zagnieżdżone poddziałki, kształt działek oraz pełne X/Y/Z. Administracyjne działki i `/ignoreclaims` działają zgodnie z GP3D. Sam status operatora nie daje dodatkowego obejścia w Bongo Teleports.
+
+TPA sprawdza aktualne miejsce odbiorcy przy wysłaniu, potwierdzeniu kosztu, akceptacji i zakończeniu odliczania. Pad sprawdza dostęp przy rozpoczęciu i podczas odliczania, również przed samym przejściem. Odebranie trustu, zmiana działki albo wyłączenie publicznego dostępu może anulować teleportację; anulowanie nie pobiera XP ani nie uruchamia cooldownu.
+
+### Publiczne pady — flaga per działka
+
+Stań w działce lub poddziałce, którą chcesz ustawić:
+
+- `/bongoteleports publicpads on` — pozwala wszystkim graczom teleportować się przez pady do tej działki.
+- `/bongoteleports publicpads off` — przywraca wymaganie Access Trust (domyślne ustawienie).
+- `/bongoteleports publicpads status` — pokazuje aktualny stan; samo `publicpads` także pokazuje stan.
+
+Flaga działa **osobno dla każdej działki i poddziałki**, w tym poddziałek 3D. Ustawienie rodzica nie otwiera jego poddziałek; ustaw flagę bezpośrednio w wybranej poddziałce. Liczy się działka przy **stopach gracza w miejscu lądowania**, czyli blok nad padem, a nie działka obejmująca sam blok pada. Pozwala to prawidłowo obsłużyć granice wysokości poddziałek 3D. Flaga docelowa rozstrzyga kierunek podróży; drugi kierunek podlega fladze i trustom drugiego miejsca docelowego.
+
+Publiczne pady nie otwierają TPA, nie przyznają Build Trust i nie pozwalają przejmować, podnosić ani synchronizować cudzych padów. Ustawienie jest flagą **Bongo Teleports**, ponieważ GP3D 19.0.0 nie udostępnia własnej flagi teleportów ani rejestracji dodatkowych flag przez API. Własne komendy GP3D do PvP i eksplozji nadal służą swoim dotychczasowym ustawieniom.
+
+Flagi zapisują się w `publicPadClaims` w `<folder świata>/bongos-teleports.json`, razem z padami; zachowują się po restarcie. Istniejące dane 1.3.0 są odczytywane z pustą listą publicznych działek, bez zmiany połączeń padów. Nieistniejące flagi claimów są czyszczone przy starcie i zapisie. Przy wyłączonym GP3D komendy flag zgłaszają brak integracji.
 
 ## Konfiguracja
 
@@ -112,7 +143,7 @@ Pady utworzone w wersji 1.0.0 zachowują swoje połączenia. Stare synchronizery
 
 ## Budowanie i testy
 
-Z JDK 25: `gradlew.bat build`. Wynik: `build/libs/BongosTeleports-1.3.0.jar`, dodatkowo JAR źródeł. Przed pierwszym testem integracyjnym uruchom `./prepare-verification.ps1 -ServerPath 'C:\ścieżka\do\serwera'`, a następnie `gradlew.bat integrationTest feedbackTest durabilityTest languageTest`. Testy używają osobnego katalogu `verification-server`, lokalnego portu 25582 i klientów protokołu vanilla. W tej kopii mod BongoUtils jest odsuwany do `external-auth-mods`, aby logowanie klientów testowych nie zależało od zewnętrznego API Mojang; serwer docelowy zachowuje ten mod. Środowisko testowe ma skrócone czasy; docelowy config zachowuje domyślne 5 i 60 sekund. Nie używaj świata produkcyjnego w katalogu weryfikacji: test resetuje dane teleportów i modyfikuje swój świat.
+Z JDK 25: `gradlew.bat build`. Wynik: `build/libs/BongosTeleports-1.4.0.jar`, dodatkowo JAR źródeł. Przed pierwszym testem integracyjnym uruchom `./prepare-verification.ps1 -ServerPath 'C:\ścieżka\do\serwera'`, a następnie `gradlew.bat integrationTest feedbackTest durabilityTest languageTest`. Testy używają osobnego katalogu `verification-server`, lokalnego portu 25582 i klientów protokołu vanilla. W tej kopii mod BongoUtils jest odsuwany do `external-auth-mods`, aby logowanie klientów testowych nie zależało od zewnętrznego API Mojang; serwer docelowy zachowuje ten mod. Środowisko testowe ma skrócone czasy; docelowy config zachowuje domyślne 5 i 60 sekund. Nie używaj świata produkcyjnego w katalogu weryfikacji: test resetuje dane teleportów i modyfikuje swój świat.
 
 Plik `teleports-verification.jar` służy wyłącznie testom craftingu; nie instalować go na docelowym serwerze.
 
@@ -166,3 +197,7 @@ Domyślne przypisania:
 | `pad_unlocked` | `minecraft:block.amethyst_block.chime` |
 | `config_reloaded` | `minecraft:ui.button.click` |
 | `config_error` | `minecraft:block.note_block.bass` |
+
+### Weryfikacja integracji GP3D
+
+`gradlew build` uruchamia również testy polityki claimów, oddzielenia flag rodzica i poddziałki, obsługi błędów i migracji danych. `gradlew claimProtectionTest` uruchamia test na prawdziwym serwerze i klientach vanilla: umieść wcześniej uniwersalny `GriefPrevention3D-19.0.0.jar` w `verification-server/mods/`. Ten test tworzy własne fixture claimów 100/101 i resetuje dane teleportów w katalogu testowym. Uruchamiaj go wyłącznie na osobnym środowisku weryfikacji, nigdy na świecie produkcyjnym. Sprawdza odmowę bez trustu, Build/Access Trust, odebranie dostępu podczas odliczania, uprawnienia flagi, niezależność poddziałki 3D, publiczny pad bez publicznego TPA i rzeczywisty restart serwera. Harnessy obsługują Windows i Linux z JDK 25.
