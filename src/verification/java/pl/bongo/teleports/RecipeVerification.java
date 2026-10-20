@@ -8,6 +8,40 @@ import java.nio.file.*;
 public final class RecipeVerification implements ModInitializer {
     public void onInitialize() {
         net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback.EVENT.register((dispatcher,registry,environment)-> {
+            dispatcher.register(net.minecraft.commands.Commands.literal("verify-filtered").requires(source->source.getEntity()==null).executes(c->{
+                var server=c.getSource().getServer();
+                if(!Files.exists(server.getServerDirectory().resolve("claim-suite-fixture.txt"))) throw new IllegalStateException("Not a fixture server");
+                var sender=server.getPlayerList().getPlayerByName("Bcfowner");var target=server.getPlayerList().getPlayerByName("Bcfmate");
+                var message=net.minecraft.network.chat.PlayerChatMessage.unsigned(sender.getUUID(),"filtered @Bcfmate");
+                var mask=new net.minecraft.network.chat.FilterMask(18);mask.setFiltered(0);
+                target.connection.sendPlayerChatMessage(message.filter(mask),net.minecraft.network.chat.ChatType.bind(net.minecraft.network.chat.ChatType.CHAT,sender.createCommandSourceStack()));return 1;
+            }));
+            dispatcher.register(net.minecraft.commands.Commands.literal("verify-idle").requires(source->source.getEntity()==null)
+                .then(net.minecraft.commands.Commands.argument("name",com.mojang.brigadier.arguments.StringArgumentType.word())
+                .then(net.minecraft.commands.Commands.argument("seconds",com.mojang.brigadier.arguments.IntegerArgumentType.integer(0,301)).executes(c->{
+                    ClaimSuiteFixture.idle(c.getSource().getServer(),com.mojang.brigadier.arguments.StringArgumentType.getString(c,"name"),com.mojang.brigadier.arguments.IntegerArgumentType.getInteger(c,"seconds"));return 1;
+                }))));
+            dispatcher.register(net.minecraft.commands.Commands.literal("verify-gp")
+                .requires(net.minecraft.commands.Commands.hasPermission(net.minecraft.commands.Commands.LEVEL_GAMEMASTERS))
+                .then(net.minecraft.commands.Commands.argument("name",com.mojang.brigadier.arguments.StringArgumentType.word()).executes(c->{
+                    ClaimSuiteFixture.report(c.getSource().getServer(),com.mojang.brigadier.arguments.StringArgumentType.getString(c,"name"));return 1;
+                })));
+            dispatcher.register(net.minecraft.commands.Commands.literal("verify-social-mob")
+                .requires(s->s.getEntity()==null)
+                .then(net.minecraft.commands.Commands.argument("nick",com.mojang.brigadier.arguments.StringArgumentType.word()).executes(c->{
+                    var p=c.getSource().getServer().getPlayerList().getPlayerByName(com.mojang.brigadier.arguments.StringArgumentType.getString(c,"nick"));
+                    if(p==null)return 0;
+                    try {
+                    var mob=net.minecraft.world.entity.EntityTypes.ZOMBIE.create(p.level(),net.minecraft.world.entity.EntitySpawnReason.COMMAND);
+                    if(mob==null)throw new IllegalStateException("The mob fixture requires a non-peaceful test difficulty");
+                    mob.setPos(p.getX()+1,p.getY(),p.getZ());mob.setTarget(p);
+                    boolean seen=net.minecraft.world.entity.ai.targeting.TargetingConditions.forNonCombat().test(p.level(),mob,p);
+                    c.getSource().sendSuccess(()->net.minecraft.network.chat.Component.literal("SOCIAL-MOB: seen="+seen+" target="+(mob.getTarget()==p)+" pickable="+p.isPickable()+" pushable="+p.isPushable()),false);return 1;
+                    } catch (RuntimeException error) {
+                        org.slf4j.LoggerFactory.getLogger("social-verification").error("Social mob verification failed",error);
+                        throw error;
+                    }
+                })));
             dispatcher.register(net.minecraft.commands.Commands.literal("verify-feedback-craft")
                 .requires(net.minecraft.commands.Commands.hasPermission(net.minecraft.commands.Commands.LEVEL_GAMEMASTERS))
                 .then(net.minecraft.commands.Commands.argument("kind",com.mojang.brigadier.arguments.StringArgumentType.word()).executes(c -> {
@@ -30,6 +64,7 @@ public final class RecipeVerification implements ModInitializer {
                 })));
         });
         ServerLifecycleEvents.SERVER_STARTED.register(s -> {
+            ClaimSuiteFixture.start(s);
             var manager=s.getRecipeManager(); var level=s.overworld();
             var brick=new ItemStack(Items.STONE_BRICKS); var eye=new ItemStack(Items.ENDER_EYE);
             var input=CraftingInput.of(3,3,List.of(ItemStack.EMPTY,brick,ItemStack.EMPTY,brick,eye,brick,ItemStack.EMPTY,brick,ItemStack.EMPTY));

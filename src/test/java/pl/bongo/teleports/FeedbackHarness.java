@@ -76,7 +76,7 @@ public final class FeedbackHarness {
                 cfg.soundsEnabled=false;Storage.write(dir.resolve("config/bongos-teleports.json"),cfg);cmd("bongoteleports reload");a.drain(300);a.events.clear();a.command("ignore-tpa");a.message("włączone");a.drain(200);
                 check(a.events.stream().noneMatch(e->e instanceof ClientboundSoundPacket),"global sound disable works");
                 cfg.soundsEnabled=true;cfg.sounds.get("tpa_error").sound="minecraft:this_sound_does_not_exist";Storage.write(dir.resolve("config/bongos-teleports.json"),cfg);
-                a.command("bongoteleports reload");alert(a,"Nieznany dźwięk",true,"invalid sound rejects reload with an action-bar error");
+                a.command("bongoteleports reload");alert(a,"Nie można przeładować konfiguracji",true,"invalid sound rejects reload with a localized action-bar error");
             }
         } finally { stop(); }
     }

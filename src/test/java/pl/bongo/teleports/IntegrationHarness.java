@@ -67,7 +67,7 @@ public final class IntegrationHarness {
     }
     static void start(Path dir) throws Exception {
         Files.deleteIfExists(dir.resolve("recipe-verification.txt"));
-        process=new ProcessBuilder(Path.of(System.getProperty("java.home"),"bin","java.exe").toString(),"-Xms256M","-Xmx1500M","-jar","fabric-server-launch.jar","nogui").directory(dir.toFile()).redirectErrorStream(true).start();
+        process=new ProcessBuilder(Path.of(System.getProperty("java.home"),"bin",System.getProperty("os.name").startsWith("Windows")?"java.exe":"java").toString(),"-Xms256M","-Xmx1500M","-jar","fabric-server-launch.jar","nogui").directory(dir.toFile()).redirectErrorStream(true).start();
         console=new PrintWriter(process.getOutputStream(),true,StandardCharsets.UTF_8);
         Thread reader=new Thread(() -> { try(var r=new BufferedReader(new InputStreamReader(process.getInputStream(),StandardCharsets.UTF_8))) { String line; while((line=r.readLine())!=null) logs.add(line); } catch(IOException e) {} }); reader.setDaemon(true); reader.start();
         long until=System.currentTimeMillis()+90000;
@@ -117,6 +117,10 @@ public final class IntegrationHarness {
                 at(b,3.5,4.5); a.command("tpa TpaBob"); a.message("Wysłano"); b.command("tpaccept TpaAlice"); a.message("za 1 sekund");
                 at(b,30.5,.5); a.message("Koszt wzrósł"); a.drain(150); check(a.totalXp==95,"target movement cannot silently increase approved price");
                 at(b,3.5,4.5); a.command("tpa TpaBob"); a.message("Wysłano"); a.message("wygasła"); check(true,"request expiry");
+                // Isolate this phase from repeated overlays and pending/cooldown state in earlier cases.
+                initial.requestTimeoutSeconds=10; Storage.write(dir.resolve("config/bongos-teleports.json"),initial); cmd("bongoteleports reload");
+                a.drain(2100); at(a,.5,.5); at(b,3.5,4.5); at(c,30.5,.5);
+                a.drain(200); b.drain(200); c.drain(200); a.events.clear(); b.events.clear(); c.events.clear();
                 a.command("tpa TpaBob"); a.message("Wysłano"); c.command("tpa TpaBob"); c.message("Wysłano"); b.command("tpaccept"); b.message("kilka próśb"); a.command("tpacancel"); a.message("anulowana"); c.command("tpacancel"); c.message("anulowana"); check(true,"multiple requests require sender selection");
                 cmd("gamemode creative TpaAlice"); at(a,10.5,8.5); cmd("setblock 10 1 10 air"); cmd("setblock 20 1 10 air"); cmd("setblock 10 2 10 air");
                 equip(a,"end_portal_frame","pad"); click(a,10,0,10); a.message("postawiony");
@@ -180,6 +184,7 @@ public final class IntegrationHarness {
         } finally { stop(); Files.write(dir.resolve("integration-server.log"),logs); }
     }
     static final class Bot implements AutoCloseable {
+        static volatile Runnable beforeAuthReply;
         final String name; UUID uuid; double x,z; int totalXp;
         final Socket socket;
         InputStream input; OutputStream output;
@@ -191,6 +196,7 @@ public final class IntegrationHarness {
         final Map<String,ClientboundSetPlayerTeamPacket.Parameters> teams=new HashMap<>();
         final List<Object> events=new ArrayList<>();
         final List<ClientboundResourcePackPushPacket> configurationPacks=new ArrayList<>();
+        final List<net.minecraft.server.dialog.Dialog> configurationDialogs=new ArrayList<>();
         final Map<Integer,net.minecraft.network.protocol.PacketType<?>> types=new HashMap<>();
         @FunctionalInterface interface PackReply {
             void handle(Bot bot,ClientboundResourcePackPushPacket pack) throws Exception;
@@ -227,7 +233,8 @@ public final class IntegrationHarness {
                     packReply.handle(this,pack);
                 }
                 else if(packet instanceof ClientboundShowDialogPacket shown) {
-                    MultiActionDialog dialog=(MultiActionDialog)shown.dialog().value();
+                    if(beforeAuthReply!=null)beforeAuthReply.run();
+                    MultiActionDialog dialog=(MultiActionDialog)shown.dialog().value();configurationDialogs.add(dialog);
                     CompoundTag fields=new CompoundTag();fields.putString("password","clans-test-password");fields.putString("repeat","clans-test-password");
                     CustomAll action=(CustomAll)dialog.actions().getFirst().action().orElseThrow();
                     send(new ServerboundCustomClickActionPacket(action.id(),Optional.of(fields)));
@@ -276,11 +283,16 @@ public final class IntegrationHarness {
                 if(type==CommonPacketTypes.CLIENTBOUND_KEEP_ALIVE) send(new ServerboundKeepAlivePacket(ClientboundKeepAlivePacket.STREAM_CODEC.decode(buffer).getId()));
                 else if(type==CommonPacketTypes.CLIENTBOUND_PING) send(new ServerboundPongPacket(ClientboundPingPacket.STREAM_CODEC.decode(buffer).getId()));
                 else if(type==CommonPacketTypes.CLIENTBOUND_DISCONNECT) throw new AssertionError(ClientboundDisconnectPacket.STREAM_CODEC.decode(buffer).reason());
+                else if(type==CommonPacketTypes.CLIENTBOUND_CLEAR_DIALOG) result=ClientboundClearDialogPacket.INSTANCE;
                 else if(type==CommonPacketTypes.CLIENTBOUND_SHOW_DIALOG) result=ClientboundShowDialogPacket.STREAM_CODEC.decode(buffer);
                 else if(type==CommonPacketTypes.CLIENTBOUND_RESOURCE_PACK_PUSH) result=ClientboundResourcePackPushPacket.STREAM_CODEC.decode(buffer);
                 else if(type==GamePacketTypes.CLIENTBOUND_ADD_ENTITY) result=ClientboundAddEntityPacket.STREAM_CODEC.decode(buffer);
                 else if(type==GamePacketTypes.CLIENTBOUND_SET_ENTITY_DATA) result=ClientboundSetEntityDataPacket.STREAM_CODEC.decode(buffer);
                 else if(type==GamePacketTypes.CLIENTBOUND_REMOVE_ENTITIES) result=ClientboundRemoveEntitiesPacket.STREAM_CODEC.decode(buffer);
+                else if(type==GamePacketTypes.CLIENTBOUND_PLAYER_INFO_REMOVE) result=ClientboundPlayerInfoRemovePacket.STREAM_CODEC.decode(buffer);
+                else if(type==GamePacketTypes.CLIENTBOUND_COMMAND_SUGGESTIONS) result=ClientboundCommandSuggestionsPacket.STREAM_CODEC.decode(buffer);
+                else if(type==GamePacketTypes.CLIENTBOUND_BLOCK_EVENT) result=ClientboundBlockEventPacket.STREAM_CODEC.decode(buffer);
+                else if(type==GamePacketTypes.CLIENTBOUND_GAME_EVENT) result=ClientboundGameEventPacket.STREAM_CODEC.decode(buffer);
                 else if(type==GamePacketTypes.CLIENTBOUND_SOUND) result=ClientboundSoundPacket.STREAM_CODEC.decode(buffer);
                 else if(type==GamePacketTypes.CLIENTBOUND_STOP_SOUND) result=ClientboundStopSoundPacket.STREAM_CODEC.decode(buffer);
                 else if(type==GamePacketTypes.CLIENTBOUND_PLAYER_POSITION) {
@@ -295,7 +307,7 @@ public final class IntegrationHarness {
                 } else if(type==GamePacketTypes.CLIENTBOUND_SYSTEM_CHAT) { var chat=ClientboundSystemChatPacket.STREAM_CODEC.decode(buffer); events.add(chat); result=chat.content(); }
                 else if(type==GamePacketTypes.CLIENTBOUND_LEVEL_PARTICLES) result=ClientboundLevelParticlesPacket.STREAM_CODEC.decode(buffer);
                 else if(type==GamePacketTypes.CLIENTBOUND_PLAYER_CHAT) {
-                    var p=ClientboundPlayerChatPacket.STREAM_CODEC.decode(buffer);result=p.chatType().decorate(p.unsignedContent().orElseGet(()->Component.literal(p.body().content())));
+                    var p=ClientboundPlayerChatPacket.STREAM_CODEC.decode(buffer);events.add(p);result=p.chatType().decorate(p.unsignedContent().orElseGet(()->Component.literal(p.body().content())));
                 } else if(type==GamePacketTypes.CLIENTBOUND_DISGUISED_CHAT) {
                     var p=ClientboundDisguisedChatPacket.STREAM_CODEC.decode(buffer);result=p.chatType().decorate(p.message());
                 } else if(type==GamePacketTypes.CLIENTBOUND_OPEN_SCREEN) result=ClientboundOpenScreenPacket.STREAM_CODEC.decode(buffer);

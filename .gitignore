@@ -11,3 +11,5 @@ verification-server/
 .env
 .env.*
 !.env.example
+
+verification-allmods/

@@ -84,13 +84,13 @@ final class Feedback {
             throw new IllegalArgumentException("Nieznany dźwięk vanilla: "+entry.getValue().sound+" ("+entry.getKey()+")");
     }
     private final Supplier<Storage.Config> config;
-    private record Notice(String text,boolean error) {}
+    private record Notice(Lang.Message text,boolean error) {}
     private static final class Display {
         Notice notice; long expires,nextSend;
         Display(Notice n,long now) { notice=n;expires=now+(n.error?1400:2800); }
     }
     private static final class Countdown {
-        int lastSecond=-1,total; String text; ServerLevel level; Vec3 position;
+        int lastSecond=-1,total; Lang.Message text; ServerLevel level; Vec3 position;
     }
     private record ScheduledSound(long due,UUID player,Event event,float pitch) {}
     private final Map<UUID,Display> displays=new HashMap<>();
@@ -100,17 +100,18 @@ final class Feedback {
     private final List<ScheduledSound> scheduled=new ArrayList<>();
     Feedback(Supplier<Storage.Config> config) { this.config=config; }
     private static long now() { return System.currentTimeMillis(); }
-    private static Component text(Notice notice) {
-        return Component.literal(notice.text).withStyle(notice.error?ChatFormatting.RED:ChatFormatting.YELLOW);
+    private static Component text(ServerPlayer p,Notice notice) {
+        return Component.literal(notice.text.text(p.clientInformation().language())).withStyle(notice.error?ChatFormatting.RED:ChatFormatting.YELLOW);
     }
-    void message(ServerPlayer p,Event event,String message) {
+    void message(ServerPlayer p,Event event,Lang.Message message) {
         if(p==null) return;
         sound(p,event);
         messageOnly(p,event,message);
     }
-    void messageOnly(ServerPlayer p,Event event,String message) {
+    void messageOnly(ServerPlayer p,Event event,Lang.Message message) {
         if(p==null) return;
-        if(needsChat(message)) { p.sendSystemMessage(Component.literal("[Teleport] "+message)); return; }
+        String rendered=message.text(p.clientInformation().language());
+        if(needsChat(rendered)) { p.sendSystemMessage(Component.literal("[Teleport] "+rendered)); return; }
         Notice notice=new Notice(message,event.error());
         if(!notice.error && countdowns.containsKey(p.getUUID())) {
             Deque<Notice> q=queued.computeIfAbsent(p.getUUID(),id->new ArrayDeque<>());
@@ -118,9 +119,9 @@ final class Feedback {
             return;
         }
         Display display=new Display(notice,now()); displays.put(p.getUUID(),display);
-        p.sendOverlayMessage(text(notice)); display.nextSend=now()+800;
+        p.sendOverlayMessage(text(p,notice)); display.nextSend=now()+800;
     }
-    void countdown(ServerPlayer p,String lane,int seconds,String message,ServerLevel level,Vec3 position) {
+    void countdown(ServerPlayer p,String lane,int seconds,Lang.Message message,ServerLevel level,Vec3 position) {
         if(seconds<=0) return;
         Map<String,Countdown> lanes=countdowns.computeIfAbsent(p.getUUID(),id->new LinkedHashMap<>());
         Countdown c=lanes.get(lane);
@@ -142,7 +143,7 @@ final class Feedback {
     }
     private void showCountdown(ServerPlayer p,Map<String,Countdown> lanes) {
         Countdown c=lanes.getOrDefault("pad",lanes.get("tpa"));
-        if(c!=null) p.sendOverlayMessage(text(new Notice(c.text,false)));
+        if(c!=null) p.sendOverlayMessage(text(p,new Notice(c.text,false)));
     }
     void endCountdown(ServerPlayer p,String lane) {
         if(p==null) return;
@@ -161,14 +162,14 @@ final class Feedback {
             UUID id=p.getUUID();Display d=displays.get(id);
             if(d!=null && d.expires<=time) { displays.remove(id);d=null; }
             if(d!=null && d.notice.error) {
-                if(time>=d.nextSend) { p.sendOverlayMessage(text(d.notice));d.nextSend=time+800; } continue;
+                if(time>=d.nextSend) { p.sendOverlayMessage(text(p,d.notice));d.nextSend=time+800; } continue;
             }
             if(countdowns.containsKey(id)) continue; // Refreshed by the active teleport each 250 ms.
             if(d==null) {
                 Deque<Notice> q=queued.get(id);
                 if(q!=null && !q.isEmpty()) { d=new Display(q.removeFirst(),time);displays.put(id,d); }
             }
-            if(d!=null && time>=d.nextSend) { p.sendOverlayMessage(text(d.notice));d.nextSend=time+800; }
+            if(d!=null && time>=d.nextSend) { p.sendOverlayMessage(text(p,d.notice));d.nextSend=time+800; }
         }
     }
     void sound(ServerPlayer p,Event event) { sound(p,event,1); }
