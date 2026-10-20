@@ -1,5 +1,5 @@
 plugins { id 'net.fabricmc.fabric-loom' version '1.17.12' }
-version = '1.4.0'
+version = '1.5.0'
 group = 'pl.bongo'
 base { archivesName = 'BongosTeleports' }
 repositories { mavenCentral() }
@@ -84,5 +84,42 @@ tasks.register('claimProtectionTest', JavaExec) {
         if (!fileTree('verification-server/mods') { include 'GriefPrevention3D*.jar' }.files)
             throw new GradleException('Place the universal GriefPrevention3D 19.0.0 jar in verification-server/mods first.')
         stageVerificationMods()
+    }
+}
+
+tasks.register('sharedClaimsTest', JavaExec) {
+    dependsOn testClasses, jar, verificationJar
+    classpath = sourceSets.test.runtimeClasspath
+    mainClass = 'pl.bongo.teleports.SharedClaimsHarness'
+    args layout.projectDirectory.dir('verification-allmods').asFile.absolutePath
+    doFirst {
+        if (!file('verification-allmods/claim-suite-fixture.txt').exists())
+            throw new GradleException('Prepare the isolated verification-allmods fixture server first.')
+        fileTree('verification-allmods/mods') { include 'BongosTeleports-*.jar' }.each { delete it }
+        copy { from tasks.jar.archiveFile; from tasks.verificationJar.archiveFile; into 'verification-allmods/mods' }
+    }
+}
+
+tasks.register('sharedClaimsWithoutGpTest', JavaExec) {
+    dependsOn testClasses, jar, verificationJar
+    classpath = sourceSets.test.runtimeClasspath
+    mainClass = 'pl.bongo.teleports.SharedClaimsHarness'
+    args layout.projectDirectory.dir('verification-allmods').asFile.absolutePath, 'no-gp'
+    doFirst {
+        if (fileTree('verification-allmods/mods') { include 'GriefPrevention3D*.jar' }.files)
+            throw new GradleException('Move GP3D out of the isolated fixture mods directory for this test.')
+        copy { from tasks.jar.archiveFile; from tasks.verificationJar.archiveFile; into 'verification-allmods/mods' }
+    }
+}
+
+tasks.register('sharedClaimsWithoutUtilsTest', JavaExec) {
+    dependsOn testClasses, jar, verificationJar
+    classpath = sourceSets.test.runtimeClasspath
+    mainClass = 'pl.bongo.teleports.SharedClaimsHarness'
+    args layout.projectDirectory.dir('verification-allmods').asFile.absolutePath, 'without-utils'
+    doFirst {
+        if (fileTree('verification-allmods/mods') { include 'BongoUtils-*.jar' }.files)
+            throw new GradleException('Move BongoUtils out of the isolated fixture mods directory for this test.')
+        copy { from tasks.jar.archiveFile; from tasks.verificationJar.archiveFile; into 'verification-allmods/mods' }
     }
 }

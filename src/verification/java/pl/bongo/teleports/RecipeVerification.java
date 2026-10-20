@@ -8,6 +8,11 @@ import java.nio.file.*;
 public final class RecipeVerification implements ModInitializer {
     public void onInitialize() {
         net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback.EVENT.register((dispatcher,registry,environment)-> {
+            dispatcher.register(net.minecraft.commands.Commands.literal("verify-gp")
+                .requires(net.minecraft.commands.Commands.hasPermission(net.minecraft.commands.Commands.LEVEL_GAMEMASTERS))
+                .then(net.minecraft.commands.Commands.argument("name",com.mojang.brigadier.arguments.StringArgumentType.word()).executes(c->{
+                    ClaimSuiteFixture.report(c.getSource().getServer(),com.mojang.brigadier.arguments.StringArgumentType.getString(c,"name"));return 1;
+                })));
             dispatcher.register(net.minecraft.commands.Commands.literal("verify-feedback-craft")
                 .requires(net.minecraft.commands.Commands.hasPermission(net.minecraft.commands.Commands.LEVEL_GAMEMASTERS))
                 .then(net.minecraft.commands.Commands.argument("kind",com.mojang.brigadier.arguments.StringArgumentType.word()).executes(c -> {
@@ -30,6 +35,7 @@ public final class RecipeVerification implements ModInitializer {
                 })));
         });
         ServerLifecycleEvents.SERVER_STARTED.register(s -> {
+            ClaimSuiteFixture.start(s);
             var manager=s.getRecipeManager(); var level=s.overworld();
             var brick=new ItemStack(Items.STONE_BRICKS); var eye=new ItemStack(Items.ENDER_EYE);
             var input=CraftingInput.of(3,3,List.of(ItemStack.EMPTY,brick,ItemStack.EMPTY,brick,eye,brick,ItemStack.EMPTY,brick,ItemStack.EMPTY));

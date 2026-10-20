@@ -12,6 +12,30 @@ import org.slf4j.Logger;
 /** Optional GP3D adapter. Delegate trust to GP3D, including inheritance, denies and staff bypass. */
 final class ClaimProtection {
     enum Trust { ACCESS, BUILD, MANAGE }
+    private static Class<?> shared;
+    private static final String PUBLIC_PADS="bongos_teleports:public_pads";
+    static void registerShared() {
+        if(!FabricLoader.getInstance().isModLoaded("bongoutils")) return;
+        try {
+            shared=Class.forName("pl.bongo.bongoutils.claims.ClaimFlags");
+            shared.getMethod("register",String.class,String.class,String.class,List.class,String.class)
+                .invoke(null,PUBLIC_PADS,"Publiczne pady teleportacyjne","Public teleport pads",List.of("off","on"),"off");
+        } catch(ClassNotFoundException e) { shared=null; }
+        catch(ReflectiveOperationException e) { throw new IllegalStateException("Nie można zarejestrować flagi padów.",e); }
+    }
+    private static Object shared(String name,Class<?>[] types,Object...args) {
+        try { return shared.getMethod(name,types).invoke(null,args); }
+        catch(ReflectiveOperationException e) { throw new IllegalStateException("Błąd wspólnych flag działek; operacja zablokowana.",e); }
+    }
+    private boolean publicAt(Object claim) {
+        return shared==null?publicPads.contains(access.key(claim))
+            :shared("value",new Class<?>[]{Object.class,String.class,String.class},claim,PUBLIC_PADS,"off").equals("on");
+    }
+    private void migrateLegacy() {
+        if(shared==null || access==null) return;
+        for(Object claim:access.claims()) if(publicPads.contains(access.key(claim)))
+            shared("importLegacy",new Class<?>[]{Object.class,String.class,String.class},claim,PUBLIC_PADS,"on");
+    }
     private final NativeAccess access;
     private final Set<String> publicPads;
 
@@ -31,7 +55,8 @@ final class ClaimProtection {
                 if(repository==null) continue;
                 NativeAccess nativeAccess=new NativeAccess(repository);
                 log.info("GriefPrevention3D claim protection enabled ({})",prefix);
-                return new ClaimProtection(nativeAccess,publicPads);
+                ClaimProtection protection=new ClaimProtection(nativeAccess,publicPads);
+                protection.migrateLegacy();return protection;
             } catch(ClassNotFoundException ignored) {
                 // The next package may be the one carried by this jar.
             } catch(ReflectiveOperationException | RuntimeException | LinkageError e) {
@@ -44,7 +69,7 @@ final class ClaimProtection {
     boolean allows(Player player,String world,BlockPos pos,Trust trust,boolean padTeleport) {
         if(access==null) return true;
         Object claim=access.claimAt(world,pos);
-        return claim==null || padTeleport && trust==Trust.ACCESS && publicPads.contains(access.key(claim))
+        return claim==null || padTeleport && trust==Trust.ACCESS && publicAt(claim)
             || access.allows(claim,player,trust);
     }
     boolean allows(ServerPlayer player,ServerLevel level,BlockPos pos,Trust trust,boolean padTeleport) {
@@ -58,8 +83,9 @@ final class ClaimProtection {
             throw new IllegalStateException("Zarządzanie flagą wymaga Manage Trust w tej działce.");
         return access.key(claim);
     }
-    boolean isPublic(String key) { return publicPads.contains(key); }
+    boolean isPublic(String key) { return shared==null?publicPads.contains(key):publicAt(access.byKey(key)); }
     void setPublic(String key,boolean enabled) {
+        if(shared!=null) shared("override",new Class<?>[]{Object.class,String.class,String.class},access.byKey(key),PUBLIC_PADS,enabled?"on":"off");
         if(enabled) publicPads.add(key); else publicPads.remove(key);
     }
     void prune() {
@@ -110,6 +136,10 @@ final class ClaimProtection {
         }
         String key(Object claim) {
             return invoke(world,claim)+":"+invoke(id,claim)+":"+invoke(owner,claim);
+        }
+        Collection<?> claims() { return (Collection<?>)invoke(getClaims,repository); }
+        Object byKey(String key) {
+            return claims().stream().filter(c->key(c).equals(key)).findFirst().orElseThrow(()->new IllegalStateException("Działka nie istnieje."));
         }
         Set<String> keys() {
             Set<String> result=new HashSet<>();

@@ -79,6 +79,7 @@ public final class Teleports implements ModInitializer {
 
     @Override public void onInitialize() {
         instance=this;
+        ClaimProtection.registerShared();
         config=Storage.read(configPath,Storage.Config.class,new Storage.Config()); config.validate();
         ServerLifecycleEvents.SERVER_STARTED.register(s -> {
             Feedback.validateRegistry(config.sounds);Storage.write(configPath,config);

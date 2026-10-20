@@ -1,4 +1,4 @@
-# Bongo's Teleports 1.4.0
+# Bongo's Teleports 1.5.0
 
 
 ## Autorstwo AI / AI disclosure
@@ -11,7 +11,7 @@ Mod wyłącznie na serwer Fabric Minecraft **26.3**, Java 25, Fabric Loader 0.19
 
 ## Instalacja
 
-Umieść `BongosTeleports-1.4.0.jar` w `mods/`, usuń starszy JAR tego moda z `mods/` i uruchom ponownie serwer. Fabric API jest wymagane i już znajduje się na serwerze testowym Bongo. Plik konfiguracyjny to `config/bongos-teleports.json`. Operator poziomu 2+ może wczytać zmiany przez `/bongoteleports reload`. Przeładowanie anuluje oczekujące teleportacje, w tym odliczania padów, aby nowe parametry nie zmieniły zaakceptowanej teleportacji.
+Umieść `BongosTeleports-1.5.0.jar` w `mods/`, usuń starszy JAR tego moda z `mods/` i uruchom ponownie serwer. Fabric API jest wymagane i już znajduje się na serwerze testowym Bongo. Plik konfiguracyjny to `config/bongos-teleports.json`. Operator poziomu 2+ może wczytać zmiany przez `/bongoteleports reload`. Przeładowanie anuluje oczekujące teleportacje, w tym odliczania padów, aby nowe parametry nie zmieniły zaakceptowanej teleportacji.
 
 ## Prośby o teleportację
 
@@ -143,7 +143,7 @@ Pady utworzone w wersji 1.0.0 zachowują swoje połączenia. Stare synchronizery
 
 ## Budowanie i testy
 
-Z JDK 25: `gradlew.bat build`. Wynik: `build/libs/BongosTeleports-1.4.0.jar`, dodatkowo JAR źródeł. Przed pierwszym testem integracyjnym uruchom `./prepare-verification.ps1 -ServerPath 'C:\ścieżka\do\serwera'`, a następnie `gradlew.bat integrationTest feedbackTest durabilityTest languageTest`. Testy używają osobnego katalogu `verification-server`, lokalnego portu 25582 i klientów protokołu vanilla. W tej kopii mod BongoUtils jest odsuwany do `external-auth-mods`, aby logowanie klientów testowych nie zależało od zewnętrznego API Mojang; serwer docelowy zachowuje ten mod. Środowisko testowe ma skrócone czasy; docelowy config zachowuje domyślne 5 i 60 sekund. Nie używaj świata produkcyjnego w katalogu weryfikacji: test resetuje dane teleportów i modyfikuje swój świat.
+Z JDK 25: `gradlew.bat build`. Wynik: `build/libs/BongosTeleports-1.5.0.jar`, dodatkowo JAR źródeł. Przed pierwszym testem integracyjnym uruchom `./prepare-verification.ps1 -ServerPath 'C:\ścieżka\do\serwera'`, a następnie `gradlew.bat integrationTest feedbackTest durabilityTest languageTest`. Testy używają osobnego katalogu `verification-server`, lokalnego portu 25582 i klientów protokołu vanilla. W tej kopii mod BongoUtils jest odsuwany do `external-auth-mods`, aby logowanie klientów testowych nie zależało od zewnętrznego API Mojang; serwer docelowy zachowuje ten mod. Środowisko testowe ma skrócone czasy; docelowy config zachowuje domyślne 5 i 60 sekund. Nie używaj świata produkcyjnego w katalogu weryfikacji: test resetuje dane teleportów i modyfikuje swój świat.
 
 Plik `teleports-verification.jar` służy wyłącznie testom craftingu; nie instalować go na docelowym serwerze.
 
@@ -201,3 +201,15 @@ Domyślne przypisania:
 ### Weryfikacja integracji GP3D
 
 `gradlew build` uruchamia również testy polityki claimów, oddzielenia flag rodzica i poddziałki, obsługi błędów i migracji danych. `gradlew claimProtectionTest` uruchamia test na prawdziwym serwerze i klientach vanilla: umieść wcześniej uniwersalny `GriefPrevention3D-19.0.0.jar` w `verification-server/mods/`. Ten test tworzy własne fixture claimów 100/101 i resetuje dane teleportów w katalogu testowym. Uruchamiaj go wyłącznie na osobnym środowisku weryfikacji, nigdy na świecie produkcyjnym. Sprawdza odmowę bez trustu, Build/Access Trust, odebranie dostępu podczas odliczania, uprawnienia flagi, niezależność poddziałki 3D, publiczny pad bez publicznego TPA i rzeczywisty restart serwera. Harnessy obsługują Windows i Linux z JDK 25.
+
+## Wspólny panel flag BongoUtils — 1.5.0
+
+Z **BongoUtils 1.4.0** publiczne pady korzystają ze wspólnej flagi `bongos_teleports:public_pads`, dostępnej w `/manageclaim` i `/manageclaim global`. Domyślnie jest wyłączona. Lokalny wyjątek ma pierwszeństwo przed domyślną właściciela, również gdy lokalnie ustawiono „Wyłączone”. Przywrócenie dziedziczenia odbywa się w panelu. Flaga jest rozstrzygana w działce obejmującej stopy w docelowym miejscu lądowania. Nadal nie otwiera TPA ani zarządzania cudzymi padami.
+
+Komendy `/bongoteleports publicpads on|off|status` pozostają dostępne. Z nowym BongoUtils odczytują tę samą flagę, a `on`/`off` zapisują lokalny wyjątek. Stare publiczne flagi wersji 1.4 są migrowane jednorazowo; przywrócenie dziedziczenia nie jest cofane po restarcie. Wspólny zapis znajduje się w `<świat>/bongo-claim-flags.json`. Dotychczasowy plik Teleports nadal przechowuje pady, cooldowny i pozostałe dane.
+
+Z **BongosCommunityClans 1.1.0** natywne sprawdzenie GP3D uwzględnia aktualny dostęp klanowy. Domyślny Build Trust członków klanu obejmuje także podstawowy dostęp wymagany przez TPA i pady; zarządzanie padem nadal wymaga jego własności. Bez nowego BongoUtils mod zachowuje samodzielną obsługę GP3D i dotychczasowe komendy publicznych padów. Bez GP3D teleportacje działają jak wcześniej, bez kontroli claimów.
+
+`sharedClaimsTest` uruchamia wszystkie trzy produkcyjne mody i GP3D 19.0.0 na osobnym `verification-allmods`, z testowym JAR-em weryfikacji i markerem fixture. `sharedClaimsWithoutGpTest` sprawdza ten sam zestaw po wyjęciu GP3D. Testy używają natywnych dialogów, zaszyfrowanego logowania offline, haseł i klientów protokołu vanilla. Nie uruchamiać harnessu na świecie użytkowym; kod testowy wymaga jawnego markera katalogu. Binarny JAR weryfikacji służy wyłącznie testom.
+
+`sharedClaimsWithoutUtilsTest` sprawdza GP3D, klany i samodzielne flagi Teleports po wyjęciu BongoUtils z katalogu testowego. Testy wymagają osobnego markera środowiska; zasoby i pliki serwera docelowego nie są modyfikowane.
