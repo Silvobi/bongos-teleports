@@ -137,3 +137,15 @@ tasks.register('socialFeaturesTest', JavaExec) {
         copy { from tasks.jar.archiveFile; from tasks.verificationJar.archiveFile; into 'verification-allmods/mods' }
     }
 }
+
+tasks.register('utilsLocalizationTest', JavaExec) {
+    dependsOn testClasses, jar, verificationJar
+    classpath = sourceSets.test.runtimeClasspath
+    mainClass = 'pl.bongo.teleports.UtilsLocalizationHarness'
+    args layout.projectDirectory.dir('verification-allmods').asFile.absolutePath
+    doFirst {
+        if (!file('verification-allmods/claim-suite-fixture.txt').exists())
+            throw new GradleException('Prepare the isolated verification-allmods fixture server first.')
+        copy { from tasks.jar.archiveFile; from tasks.verificationJar.archiveFile; into 'verification-allmods/mods' }
+    }
+}

@@ -195,6 +195,7 @@ public final class IntegrationHarness {
         final Map<String,ClientboundSetPlayerTeamPacket.Parameters> teams=new HashMap<>();
         final List<Object> events=new ArrayList<>();
         final List<ClientboundResourcePackPushPacket> configurationPacks=new ArrayList<>();
+        final List<net.minecraft.server.dialog.Dialog> configurationDialogs=new ArrayList<>();
         final Map<Integer,net.minecraft.network.protocol.PacketType<?>> types=new HashMap<>();
         @FunctionalInterface interface PackReply {
             void handle(Bot bot,ClientboundResourcePackPushPacket pack) throws Exception;
@@ -231,7 +232,7 @@ public final class IntegrationHarness {
                     packReply.handle(this,pack);
                 }
                 else if(packet instanceof ClientboundShowDialogPacket shown) {
-                    MultiActionDialog dialog=(MultiActionDialog)shown.dialog().value();
+                    MultiActionDialog dialog=(MultiActionDialog)shown.dialog().value();configurationDialogs.add(dialog);
                     CompoundTag fields=new CompoundTag();fields.putString("password","clans-test-password");fields.putString("repeat","clans-test-password");
                     CustomAll action=(CustomAll)dialog.actions().getFirst().action().orElseThrow();
                     send(new ServerboundCustomClickActionPacket(action.id(),Optional.of(fields)));

@@ -114,7 +114,7 @@ public final class SharedClaimsHarness {
                 var menu=open(a,false);check(menu.actions().size()==6,"vanilla dialog lists four native and both custom flags");
                 check(local(300,"bongos_teleports:public_pads").equals("on"),"legacy public-pad flag imported into shared manager");
                 b.command("manageclaim");b.message("Manage Trust");check(true,"untrusted player cannot open claim panel");
-                c.command("manageclaim");c.message("żadnej działce");check(true,"local command rejects wilderness");
+                c.command("manageclaim");c.message("not standing in a claim");check(true,"local command rejects wilderness");
                 set(a,true,"Eksplozje:","Włączone");nativeValue(100,"Explosives Allowed",true);
                 set(a,true,"Eksplozje:","Wyłączone");nativeValue(100,"Explosives Allowed",false);nativeValue(300,"Explosives Allowed",true);
                 check("on".equals(local(300,"gp3d:explosions")),"nondefault old GP flags become local exceptions");
