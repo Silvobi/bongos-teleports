@@ -149,3 +149,16 @@ tasks.register('utilsLocalizationTest', JavaExec) {
         copy { from tasks.jar.archiveFile; from tasks.verificationJar.archiveFile; into 'verification-allmods/mods' }
     }
 }
+
+tasks.register('clanTagCompatibilityTest', JavaExec) {
+    dependsOn testClasses, jar, verificationJar
+    classpath = sourceSets.test.runtimeClasspath
+    mainClass = 'pl.bongo.teleports.ClanTagCompatibilityHarness'
+    args layout.projectDirectory.dir('verification-allmods').asFile.absolutePath,
+        project.findProperty('previousClansJar') ?: '', project.findProperty('fixedClansJar') ?: ''
+    doFirst {
+        if (!file('verification-allmods/claim-suite-fixture.txt').exists() || !project.hasProperty('previousClansJar') || !project.hasProperty('fixedClansJar'))
+            throw new GradleException('Use the isolated fixture and supply -PpreviousClansJar=... and -PfixedClansJar=...')
+        copy { from tasks.jar.archiveFile; from tasks.verificationJar.archiveFile; into 'verification-allmods/mods' }
+    }
+}
