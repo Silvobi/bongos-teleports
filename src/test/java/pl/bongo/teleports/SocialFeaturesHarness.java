@@ -29,6 +29,30 @@ public final class SocialFeaturesHarness {
         b.drain(250);
         check(b.events.stream().noneMatch(e->e instanceof ClientboundSoundPacket || e instanceof ClientboundSystemChatPacket p && p.overlay()),b.name+" has no mention sound/overlay");
     }
+    static void rulesAndReload(Path root,Bot a,Bot b) throws Exception {
+        Path file=root.resolve("config/bongoutils/config.json");String previous=Files.readString(file);
+        try {
+            var config=com.google.gson.JsonParser.parseString(previous).getAsJsonObject();
+            var rules=new com.google.gson.JsonObject();rules.addProperty("mode","dialog");rules.addProperty("title","Zasady scalone");
+            var entries=new com.google.gson.JsonArray();entries.add("Szanuj innych.");rules.add("entries",entries);config.add("rules",rules);
+            Files.writeString(file,config.toString());
+            clear(a,b);a.command("bongoutils reload");a.message("Unknown");check(true,"ordinary player cannot reload configuration");
+            cmd("op "+a.name);clear(a,b);a.command("bongoutils resetpassword "+b.name);a.message("Incorrect argument");
+            check(true,"OP player still cannot use console-only password reset");
+            a.command("m "+b.name+" before-reload");b.message("before-reload");
+            a.command("bongoutils reload");a.message("Przeładowano config");check(true,"OP reload reads edited rules without restart");
+            a.events.clear();a.command("rules");var shown=(net.minecraft.network.protocol.common.ClientboundShowDialogPacket)a.await(e->e instanceof net.minecraft.network.protocol.common.ClientboundShowDialogPacket,3000);
+            var dialog=(net.minecraft.server.dialog.NoticeDialog)shown.dialog().value();
+            check(dialog.common().title().getString().equals("Zasady scalone") && ((net.minecraft.server.dialog.body.PlainMessage)dialog.common().body().getFirst()).contents().getString().equals("1. Szanuj innych."),"/rules delivers configured native dialog");
+            tab(b,a.uuid,"[Buduję bazę] [ST] Bcfowner");b.command("r after-reload");a.message("after-reload");check(true,"reload preserves custom status and private reply partner");
+            rules.addProperty("mode","link");rules.addProperty("url","https://example.org/scalone-zasady");Files.writeString(file,config.toString());
+            a.command("bongoutils reload");a.message("Przeładowano config");a.command("rules");var link=a.message("https://example.org/scalone-zasady");
+            check(link.visit((style,text)->style.getClickEvent() instanceof ClickEvent.OpenUrl event && event.uri().toString().equals("https://example.org/scalone-zasady")?Optional.of(true):Optional.empty(),Style.EMPTY).orElse(false),"reload switches /rules to native clickable link");
+            Files.writeString(file,"{broken");a.command("bongoutils reload");a.message("Poprzednia konfiguracja pozostaje aktywna");
+            a.command("rules");a.message("https://example.org/scalone-zasady");check(true,"invalid reload preserves last valid rules and server state");
+            Files.writeString(file,config.toString());cmd("bongoutils reload");clear(a);a.command("rules");a.message("https://example.org/scalone-zasady");check(true,"console reload remains available");
+        } finally { Files.writeString(file,previous);cmd("deop "+a.name); }
+    }
     static void standalone(Path root) throws Exception {
         try {
             start(root);
@@ -57,6 +81,9 @@ public final class SocialFeaturesHarness {
                 b.command("r test");b.message("Nie masz jeszcze rozmówcy");check(true,"reply before first PM gives useful error");
                 a.command("clan create SocialTeam ST");a.drain(350);a.command("status Buduję bazę");a.message("Ustawiono status");
                 tab(b,a.uuid,"[Buduję bazę] [ST] Bcfowner");
+                rulesAndReload(root,a,b);
+                // Reload checks issue many commands as OP; let vanilla's command throttle drain before deopped tests.
+                for(int i=0;i<20;i++) { a.drain(340);b.drain(340);c.drain(340); }
                 clear(a,b,c);a.command("afk");Component announcement=b.message("Bcfowner jest teraz AFK.");
                 check(color(announcement,"Bcfowner jest teraz AFK.",ChatFormatting.GRAY),"AFK announcement is gray");tab(b,a.uuid,"[AFK] [ST] Bcfowner");
                 a.command("status Zwiedzam");a.message("Ustawiono status");b.drain(150);
