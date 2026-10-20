@@ -117,8 +117,10 @@ public final class IntegrationHarness {
                 at(b,3.5,4.5); a.command("tpa TpaBob"); a.message("Wysłano"); b.command("tpaccept TpaAlice"); a.message("za 1 sekund");
                 at(b,30.5,.5); a.message("Koszt wzrósł"); a.drain(150); check(a.totalXp==95,"target movement cannot silently increase approved price");
                 at(b,3.5,4.5); a.command("tpa TpaBob"); a.message("Wysłano"); a.message("wygasła"); check(true,"request expiry");
-                // Give both independent clients time to submit, without the 2-second expiry race.
+                // Isolate this phase from repeated overlays and pending/cooldown state in earlier cases.
                 initial.requestTimeoutSeconds=10; Storage.write(dir.resolve("config/bongos-teleports.json"),initial); cmd("bongoteleports reload");
+                a.drain(2100); at(a,.5,.5); at(b,3.5,4.5); at(c,30.5,.5);
+                a.drain(200); b.drain(200); c.drain(200); a.events.clear(); b.events.clear(); c.events.clear();
                 a.command("tpa TpaBob"); a.message("Wysłano"); c.command("tpa TpaBob"); c.message("Wysłano"); b.command("tpaccept"); b.message("kilka próśb"); a.command("tpacancel"); a.message("anulowana"); c.command("tpacancel"); c.message("anulowana"); check(true,"multiple requests require sender selection");
                 cmd("gamemode creative TpaAlice"); at(a,10.5,8.5); cmd("setblock 10 1 10 air"); cmd("setblock 20 1 10 air"); cmd("setblock 10 2 10 air");
                 equip(a,"end_portal_frame","pad"); click(a,10,0,10); a.message("postawiony");
