@@ -35,11 +35,11 @@ Bez wspólnego panelu BongoUtils flagi zapisują się w `publicPadClaims` w `<fo
 
 ## Wspólny panel flag BongoUtils — 1.5.0
 
-Z **BongoUtils 1.6.2** publiczne pady korzystają ze wspólnej flagi `bongos_teleports:public_pads`, dostępnej w `/manageclaim` i `/manageclaim global`. Domyślnie jest wyłączona. Lokalny wyjątek ma pierwszeństwo przed domyślną właściciela, również gdy lokalnie ustawiono „Wyłączone”. Przywrócenie dziedziczenia odbywa się w panelu. Flaga jest rozstrzygana w działce obejmującej stopy w docelowym miejscu lądowania. Nadal nie otwiera TPA ani zarządzania cudzymi padami.
+Z **BongoUtils 1.7.0** publiczne pady korzystają ze wspólnej flagi `bongos_teleports:public_pads`, dostępnej w `/manageclaim` i `/manageclaim global`. Domyślnie jest wyłączona. Lokalny wyjątek ma pierwszeństwo przed domyślną właściciela, również gdy lokalnie ustawiono „Wyłączone”. Przywrócenie dziedziczenia odbywa się w panelu. Flaga jest rozstrzygana w działce obejmującej stopy w docelowym miejscu lądowania. Nadal nie otwiera TPA ani zarządzania cudzymi padami.
 
 Komendy `/bongoteleports publicpads on|off|status` pozostają dostępne. Z nowym BongoUtils odczytują tę samą flagę, a `on`/`off` zapisują lokalny wyjątek. Stare publiczne flagi wersji 1.4 są migrowane jednorazowo; przywrócenie dziedziczenia nie jest cofane po restarcie. Wspólny zapis znajduje się w `<świat>/bongo-claim-flags.json`. Dotychczasowy plik Teleports nadal przechowuje pady, cooldowny i pozostałe dane.
 
-Z **BongosCommunityClans 1.1.1** natywne sprawdzenie GP3D uwzględnia aktualny dostęp klanowy. Domyślny Build Trust członków klanu obejmuje także podstawowy dostęp wymagany przez TPA i pady; zarządzanie padem nadal wymaga jego własności. Bez nowego BongoUtils mod zachowuje samodzielną obsługę GP3D i dotychczasowe komendy publicznych padów. Bez GP3D teleportacje działają jak wcześniej, bez kontroli claimów.
+Z **BongosCommunityClans 1.1.2** natywne sprawdzenie GP3D uwzględnia aktualny dostęp klanowy. Domyślny Build Trust członków klanu obejmuje także podstawowy dostęp wymagany przez TPA i pady; zarządzanie padem nadal wymaga jego własności. Bez nowego BongoUtils mod zachowuje samodzielną obsługę GP3D i dotychczasowe komendy publicznych padów. Bez GP3D teleportacje działają jak wcześniej, bez kontroli claimów.
 
 `sharedClaimsTest` uruchamia wszystkie trzy produkcyjne mody i GP3D 19.0.0 na osobnym `verification-allmods`, z testowym JAR-em weryfikacji i markerem fixture. `sharedClaimsWithoutGpTest` sprawdza ten sam zestaw po wyjęciu GP3D. Testy używają natywnych dialogów, zaszyfrowanego logowania offline, haseł i klientów protokołu vanilla. Nie uruchamiać harnessu na świecie użytkowym; kod testowy wymaga jawnego markera katalogu. Binarny JAR weryfikacji służy wyłącznie testom.
 

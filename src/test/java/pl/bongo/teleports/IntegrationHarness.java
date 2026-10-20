@@ -184,6 +184,7 @@ public final class IntegrationHarness {
         } finally { stop(); Files.write(dir.resolve("integration-server.log"),logs); }
     }
     static final class Bot implements AutoCloseable {
+        static volatile Runnable beforeAuthReply;
         final String name; UUID uuid; double x,z; int totalXp;
         final Socket socket;
         InputStream input; OutputStream output;
@@ -232,6 +233,7 @@ public final class IntegrationHarness {
                     packReply.handle(this,pack);
                 }
                 else if(packet instanceof ClientboundShowDialogPacket shown) {
+                    if(beforeAuthReply!=null)beforeAuthReply.run();
                     MultiActionDialog dialog=(MultiActionDialog)shown.dialog().value();configurationDialogs.add(dialog);
                     CompoundTag fields=new CompoundTag();fields.putString("password","clans-test-password");fields.putString("repeat","clans-test-password");
                     CustomAll action=(CustomAll)dialog.actions().getFirst().action().orElseThrow();
@@ -281,11 +283,16 @@ public final class IntegrationHarness {
                 if(type==CommonPacketTypes.CLIENTBOUND_KEEP_ALIVE) send(new ServerboundKeepAlivePacket(ClientboundKeepAlivePacket.STREAM_CODEC.decode(buffer).getId()));
                 else if(type==CommonPacketTypes.CLIENTBOUND_PING) send(new ServerboundPongPacket(ClientboundPingPacket.STREAM_CODEC.decode(buffer).getId()));
                 else if(type==CommonPacketTypes.CLIENTBOUND_DISCONNECT) throw new AssertionError(ClientboundDisconnectPacket.STREAM_CODEC.decode(buffer).reason());
+                else if(type==CommonPacketTypes.CLIENTBOUND_CLEAR_DIALOG) result=ClientboundClearDialogPacket.INSTANCE;
                 else if(type==CommonPacketTypes.CLIENTBOUND_SHOW_DIALOG) result=ClientboundShowDialogPacket.STREAM_CODEC.decode(buffer);
                 else if(type==CommonPacketTypes.CLIENTBOUND_RESOURCE_PACK_PUSH) result=ClientboundResourcePackPushPacket.STREAM_CODEC.decode(buffer);
                 else if(type==GamePacketTypes.CLIENTBOUND_ADD_ENTITY) result=ClientboundAddEntityPacket.STREAM_CODEC.decode(buffer);
                 else if(type==GamePacketTypes.CLIENTBOUND_SET_ENTITY_DATA) result=ClientboundSetEntityDataPacket.STREAM_CODEC.decode(buffer);
                 else if(type==GamePacketTypes.CLIENTBOUND_REMOVE_ENTITIES) result=ClientboundRemoveEntitiesPacket.STREAM_CODEC.decode(buffer);
+                else if(type==GamePacketTypes.CLIENTBOUND_PLAYER_INFO_REMOVE) result=ClientboundPlayerInfoRemovePacket.STREAM_CODEC.decode(buffer);
+                else if(type==GamePacketTypes.CLIENTBOUND_COMMAND_SUGGESTIONS) result=ClientboundCommandSuggestionsPacket.STREAM_CODEC.decode(buffer);
+                else if(type==GamePacketTypes.CLIENTBOUND_BLOCK_EVENT) result=ClientboundBlockEventPacket.STREAM_CODEC.decode(buffer);
+                else if(type==GamePacketTypes.CLIENTBOUND_GAME_EVENT) result=ClientboundGameEventPacket.STREAM_CODEC.decode(buffer);
                 else if(type==GamePacketTypes.CLIENTBOUND_SOUND) result=ClientboundSoundPacket.STREAM_CODEC.decode(buffer);
                 else if(type==GamePacketTypes.CLIENTBOUND_STOP_SOUND) result=ClientboundStopSoundPacket.STREAM_CODEC.decode(buffer);
                 else if(type==GamePacketTypes.CLIENTBOUND_PLAYER_POSITION) {

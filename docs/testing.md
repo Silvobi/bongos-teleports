@@ -4,11 +4,11 @@
 
 ## Build
 
-Wymagane JDK 25. `bash gradlew build` (Linux) lub `gradlew.bat build` (Windows) kompiluje mod i uruchamia testy jednostkowe. Wynik: `build/libs/BongosTeleports-1.5.0.jar`, dodatkowo archiwum źródeł.
+Wymagane JDK 25. `bash gradlew build` (Linux) lub `gradlew.bat build` (Windows) kompiluje mod i uruchamia testy jednostkowe. Wynik: `build/libs/BongosTeleports-1.6.0.jar`, dodatkowo archiwum źródeł.
 
 ## Oddzielny serwer Teleports
 
-Z JDK 25: `gradlew.bat build`. Wynik: `build/libs/BongosTeleports-1.5.0.jar`, dodatkowo JAR źródeł. Przed pierwszym testem integracyjnym uruchom `./prepare-verification.ps1 -ServerPath 'C:\ścieżka\do\serwera'`, a następnie `gradlew.bat integrationTest feedbackTest durabilityTest languageTest`. Testy używają osobnego katalogu `verification-server`, lokalnego portu 25582 i klientów protokołu vanilla. W tej kopii mod BongoUtils jest odsuwany do `external-auth-mods`, aby logowanie klientów testowych nie zależało od zewnętrznego API Mojang; serwer docelowy zachowuje ten mod. Środowisko testowe ma skrócone czasy; docelowy config zachowuje domyślne 5 i 60 sekund. Nie używaj świata produkcyjnego w katalogu weryfikacji: test resetuje dane teleportów i modyfikuje swój świat.
+Z JDK 25: `gradlew.bat build`. Wynik: `build/libs/BongosTeleports-1.6.0.jar`, dodatkowo JAR źródeł. Przed pierwszym testem integracyjnym uruchom `./prepare-verification.ps1 -ServerPath 'C:\ścieżka\do\serwera'`, a następnie `gradlew.bat integrationTest feedbackTest durabilityTest languageTest`. Testy używają osobnego katalogu `verification-server`, lokalnego portu 25582 i klientów protokołu vanilla. W tej kopii mod BongoUtils jest odsuwany do `external-auth-mods`, aby logowanie klientów testowych nie zależało od zewnętrznego API Mojang; serwer docelowy zachowuje ten mod. Środowisko testowe ma skrócone czasy; docelowy config zachowuje domyślne 5 i 60 sekund. Nie używaj świata produkcyjnego w katalogu weryfikacji: test resetuje dane teleportów i modyfikuje swój świat.
 
 Plik `teleports-verification.jar` służy wyłącznie testom craftingu; nie instalować go na docelowym serwerze.
 
@@ -23,7 +23,7 @@ Plik `teleports-verification.jar` służy wyłącznie testom craftingu; nie inst
 Te zadania uruchamiają własny lokalny serwer i klientów protokołu vanilla. Nie wymagają otwierania klienta graficznego, ale wymagają przygotowanego środowiska Fabric 26.3. `prepare-verification.ps1` przygotowuje tylko starsze `verification-server`; nie przygotowuje automatycznie tego katalogu.
 
 1. Utwórz **nowy, pusty, testowy** katalog `verification-allmods` w katalogu repozytorium. Przygotuj w nim launcher `fabric-server-launch.jar`, jego pliki konfiguracyjne i biblioteki dla Fabric 26.3. Nie kopiuj świata, kont, haseł ani prywatnej konfiguracji z serwera użytkowego.
-2. W `mods/` umieść Fabric API 0.161.0+26.3, uniwersalny GP3D 19.0.0, BongoUtils 1.6.2 i BongosCommunityClans 1.1.1. Gradle dołoży bieżący Teleports i testowy JAR. Zachowaj po jednej wersji każdego moda.
+2. W `mods/` umieść Fabric API 0.161.0+26.3, uniwersalny GP3D 19.0.0, BongoUtils 1.7.0 i BongosCommunityClans 1.1.2. Gradle dołoży bieżący Teleports i testowy JAR. Zachowaj po jednej wersji każdego moda.
 3. Zaakceptuj EULA, wpisując `eula=true` do `eula.txt`, jeśli akceptujesz jej warunki.
 4. Ustaw `server.properties` według poniższego przykładu. Nazwa świata musi być `world`; port 25582 musi być wolny.
 5. W `claim-suite-fixture.txt` zapisz w osobnych wierszach: `Bcfowner`, `Bcfmate`, `Bcfother`. Marker umożliwia testowemu modowi zasymulowanie braku tych nicków w Mojang; szyfrowanie i logowanie hasłem pozostają rzeczywiste. Używaj go wyłącznie w tym odizolowanym środowisku.
@@ -59,6 +59,7 @@ Ustawienia `online-mode=false` i pozostałe parametry powyżej dotyczą tylko lo
 | `utilsLocalizationTest` | Klienci PL, EN i `de_de`, logowanie/rejestracja, dialogi, błędy, AFK, regulamin i zmiana języka |
 | `sharedClaimsWithoutGpTest` | Opcjonalność GP3D; wcześniej przenieś jego JAR poza testowe `mods/` |
 | `sharedClaimsWithoutUtilsTest` | Samodzielne trusty klanowe i publiczne pady; po bazowym teście przenieś Utils poza testowe `mods/` |
+| `dialogLifecycleTest` | Dialogi wszystkich modów, poczta offline i restart, ignorowanie, statusy i TPA |
 | `clanTagCompatibilityTest` | Błąd starego `bad_tag` i uruchomienie tych samych danych z poprawką 1.1.1 |
 
 Przykład (Linux, uruchomiony z katalogu Teleports):
@@ -67,7 +68,7 @@ Przykład (Linux, uruchomiony z katalogu Teleports):
 bash gradlew sharedClaimsTest
 bash gradlew socialFeaturesTest
 bash gradlew utilsLocalizationTest
-bash gradlew clanTagCompatibilityTest -PpreviousClansJar=/absolutna/sciezka/BongosCommunityClans-1.1.0.jar -PfixedClansJar=/absolutna/sciezka/BongosCommunityClans-1.1.1.jar
+bash gradlew clanTagCompatibilityTest -PpreviousClansJar=/absolutna/sciezka/BongosCommunityClans-1.1.0.jar -PfixedClansJar=/absolutna/sciezka/BongosCommunityClans-1.1.2.jar
 ```
 
 Dwa JAR-y Clans w ostatnim zadaniu muszą znajdować się poza testowym `mods/`. Harness podmienia je na czas próby i przywraca poprawiony JAR na końcu. Warianty bez GP3D/Utils uruchamiaj pojedynczo i przywracaj przeniesione mody przed kolejną pełną próbą. Wariant `socialFeaturesTest -PsocialStandalone` wymaga wcześniejszego przeniesienia GP3D i Clans poza testowe `mods/`.

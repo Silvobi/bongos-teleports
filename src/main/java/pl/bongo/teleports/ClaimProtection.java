@@ -11,6 +11,10 @@ import org.slf4j.Logger;
 
 /** Optional GP3D adapter. Delegate trust to GP3D, including inheritance, denies and staff bypass. */
 final class ClaimProtection {
+    static final class Failure extends IllegalStateException {
+        final String key;
+        Failure(String key) { super(key); this.key=key; }
+    }
     enum Trust { ACCESS, BUILD, MANAGE }
     private static Class<?> shared;
     private static final String PUBLIC_PADS="bongos_teleports:public_pads";
@@ -76,11 +80,11 @@ final class ClaimProtection {
         return allows(player,level.dimension().identifier().toString(),pos,trust,padTeleport);
     }
     String managedClaim(Player player,String world,BlockPos pos) {
-        if(access==null) throw new IllegalStateException("GriefPrevention3D nie jest zainstalowane.");
+        if(access==null) throw new Failure("claim_gp_missing");
         Object claim=access.claimAt(world,pos);
-        if(claim==null) throw new IllegalStateException("Stań w działce lub poddziałce, której flagę chcesz zmienić.");
+        if(claim==null) throw new Failure("claim_wilderness");
         if(!access.allows(claim,player,Trust.MANAGE))
-            throw new IllegalStateException("Zarządzanie flagą wymaga Manage Trust w tej działce.");
+            throw new Failure("claim_manage");
         return access.key(claim);
     }
     boolean isPublic(String key) { return shared==null?publicPads.contains(key):publicAt(access.byKey(key)); }

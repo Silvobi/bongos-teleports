@@ -1,13 +1,13 @@
-# Bongo's Teleports 1.5.0
+# Bongo's Teleports 1.6.0
 
 Serwerowy mod Fabric dla **Minecraft Java 26.3**: prośby TPA opłacane punktami XP, parowane teleport pady oraz opcjonalna ochrona działek GP3D. Wystarczy klient vanilla — bez moda klientowego i paczki zasobów.
 
 ## Wymagania i instalacja
 
 - **Java 25**, Fabric Loader **0.19.5+**, Fabric API **0.161.0+26.3**.
-- Opcjonalnie: **GriefPrevention3D 19.0.0** (uniwersalny JAR), [BongoUtils 1.6.2](https://github.com/Silvobi/bongo-utils) do wspólnego panelu flag i [BongosCommunityClans 1.1.1](https://github.com/Silvobi/bongos-community-clans) do trustów klanowych.
+- Opcjonalnie: **GriefPrevention3D 19.0.0** (uniwersalny JAR), [BongoUtils 1.7.0](https://github.com/Silvobi/bongo-utils) do wspólnego panelu flag i [BongosCommunityClans 1.1.2](https://github.com/Silvobi/bongos-community-clans) do trustów klanowych.
 
-Zatrzymaj serwer, wykonaj kopię świata i konfiguracji, usuń poprzedni JAR Teleports i włóż `BongosTeleports-1.5.0.jar` do `mods/`. Zachowaj `config/bongos-teleports.json` oraz `<świat>/bongos-teleports.json`. Uruchom ponownie serwer. GP3D i pozostałe mody Bongo instalowane są osobno.
+Zatrzymaj serwer, wykonaj kopię świata i konfiguracji, usuń poprzedni JAR Teleports i włóż `BongosTeleports-1.6.0.jar` do `mods/`. Zachowaj `config/bongos-teleports.json` oraz `<świat>/bongos-teleports.json`. Uruchom ponownie serwer. GP3D i pozostałe mody Bongo instalowane są osobno.
 
 ## Komendy
 
@@ -65,9 +65,9 @@ Dostęp jest sprawdzany ponownie podczas odliczania. Cofnięcie trustu lub zmian
 
 `/bongoteleports publicpads on` otwiera korzystanie z padów **do konkretnej działki/poddziałki**. `off` przywraca wymaganie Access Trust, a `status` pokazuje stan. Liczy się miejsce przy stopach gracza po lądowaniu, czyli nad blokiem pada. Flaga nie daje dostępu do TPA, budowania ani cudzych padów.
 
-Z BongoUtils 1.6.2 komendy używają tej samej flagi `bongos_teleports:public_pads` co `/manageclaim`. `/manageclaim global` ustawia domyślną wartość działek **danego właściciela**. Kolejność: lokalny wyjątek tej działki (także „Wyłączone”) → domyślna właściciela → domyślne `off`. Lokalna flaga rodzica nie otwiera automatycznie poddziałek.
+Z BongoUtils 1.7.0 komendy używają tej samej flagi `bongos_teleports:public_pads` co `/manageclaim`. `/manageclaim global` ustawia domyślną wartość działek **danego właściciela**. Kolejność: lokalny wyjątek tej działki (także „Wyłączone”) → domyślna właściciela → domyślne `off`. Lokalna flaga rodzica nie otwiera automatycznie poddziałek.
 
-Stare flagi publicznych padów są importowane do wspólnego zapisu jednorazowo. Bez BongoUtils działa samodzielna flaga w danych Teleports. Z Clans 1.1.1 natywny GP3D uwzględnia również bieżące trusty klanowe; własność pada nadal jest wymagana do zarządzania nim. [Pełne zasady, migracja i zapis](docs/claims.md).
+Stare flagi publicznych padów są importowane do wspólnego zapisu jednorazowo. Bez BongoUtils działa samodzielna flaga w danych Teleports. Z Clans 1.1.2 natywny GP3D uwzględnia również bieżące trusty klanowe; własność pada nadal jest wymagana do zarządzania nim. [Pełne zasady, migracja i zapis](docs/claims.md).
 
 ## Konfiguracja
 
@@ -93,15 +93,15 @@ Pady utworzone w wersji 1.0.0 zachowują swoje połączenia. Stare synchronizery
 
 ## Język, hotbar i dźwięki
 
-Nazwy i lore przedmiotów są dostosowywane osobno do języka klienta: `pl_*` → polski, pozostałe → angielski. Dotyczy to także przedmiotu oglądanego przez dwie osoby w jednej skrzyni, przepisu i zmiany języka podczas gry. W tej gałęzi 1.5.0 lokalizacja Teleports obejmuje **prezentację przedmiotów**; komunikaty TPA i GP3D pozostają polskie. Osobne zmiany pełniejszych tłumaczeń i integracji ignore/vanish znajdują się w [PR #2](https://github.com/Silvobi/bongos-teleports/pull/2).
+Nazwy i lore przedmiotów są dostosowywane osobno do języka klienta: `pl_*` → polski, pozostałe → angielski. Dotyczy to także przedmiotu oglądanego przez dwie osoby w jednej skrzyni, przepisu i zmiany języka podczas gry. Komunikaty TPA, padów i GP3D także korzystają z PL/EN. Z BongoUtils 1.7.0 ignorowanie i pełny vanish blokują TPA w obie strony, także przy ponownym sprawdzaniu odliczania. Zachowana jest integracja migracji właścicieli padów, cooldownów i ignorowania TPA.
 
 Instrukcje z komendami pozostają na czacie. Rutynowe potwierdzenia, błędy i odliczanie trafiają nad hotbar. Odliczanie ma pierwszeństwo przed zwykłymi potwierdzeniami. Dźwięki są vanilla, konfigurowalne globalnie i per event. [Zachowanie powiadomień i kompletna mapa dźwięków](docs/sounds.md).
 
 ## Budowanie i testy
 
-Z JDK 25: `bash gradlew build` na Linuxie lub `gradlew.bat build` na Windowsie. Gotowy mod: `build/libs/BongosTeleports-1.5.0.jar`. `-sources.jar` zawiera kod źródłowy.
+Z JDK 25: `bash gradlew build` na Linuxie lub `gradlew.bat build` na Windowsie. Gotowy mod: `build/libs/BongosTeleports-1.6.0.jar`. `-sources.jar` zawiera kod źródłowy.
 
-Repozytorium zawiera testy jednostkowe i testy z klientami protokołu vanilla: TPA, przepisy, trwałość, język przedmiotów, GP3D oraz wspólne testy wszystkich trzech modów (`sharedClaimsTest`, `socialFeaturesTest`, `utilsLocalizationTest`, `clanTagCompatibilityTest`). Wymagają przygotowanego, oddzielnego serwera testowego. [Instrukcje przygotowania, zadania i ograniczenia](docs/testing.md).
+Repozytorium zawiera testy jednostkowe i testy z klientami protokołu vanilla: TPA, przepisy, trwałość, język przedmiotów, GP3D oraz wspólne testy wszystkich trzech modów (`sharedClaimsTest`, `socialFeaturesTest`, `utilsLocalizationTest`, `clanTagCompatibilityTest`, `dialogLifecycleTest`). Wymagają przygotowanego, oddzielnego serwera testowego. [Instrukcje przygotowania, zadania i ograniczenia](docs/testing.md).
 
 `teleports-verification.jar` służy wyłącznie testom. Nie instaluj go na serwerze użytkowym.
 

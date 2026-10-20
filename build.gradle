@@ -1,5 +1,5 @@
 plugins { id 'net.fabricmc.fabric-loom' version '1.17.12' }
-version = '1.5.0'
+version = '1.6.0'
 group = 'pl.bongo'
 base { archivesName = 'BongosTeleports' }
 repositories { mavenCentral() }
@@ -13,7 +13,10 @@ dependencies {
 }
 java { toolchain.languageVersion = JavaLanguageVersion.of(25); withSourcesJar() }
 tasks.withType(JavaCompile).configureEach { options.encoding = 'UTF-8'; options.release = 25 }
-processResources { filesMatching('fabric.mod.json') { expand version: project.version } }
+processResources {
+    inputs.property 'version', project.version
+    filesMatching('fabric.mod.json') { expand version: project.version }
+}
 test { useJUnitPlatform() }
 sourceSets {
     verification {
@@ -159,6 +162,43 @@ tasks.register('clanTagCompatibilityTest', JavaExec) {
     doFirst {
         if (!file('verification-allmods/claim-suite-fixture.txt').exists() || !project.hasProperty('previousClansJar') || !project.hasProperty('fixedClansJar'))
             throw new GradleException('Use the isolated fixture and supply -PpreviousClansJar=... and -PfixedClansJar=...')
+        copy { from tasks.jar.archiveFile; from tasks.verificationJar.archiveFile; into 'verification-allmods/mods' }
+    }
+}
+
+tasks.register('socialIntegrationTest', JavaExec) {
+    dependsOn testClasses, jar, verificationJar
+    classpath = sourceSets.test.runtimeClasspath
+    mainClass = 'pl.bongo.teleports.SocialIntegrationHarness'
+    args(project.findProperty('socialServer') ?: 'verification-server')
+    doFirst {
+        def target = file(project.findProperty('socialServer') ?: 'verification-server')
+        copy { from tasks.jar.archiveFile; from tasks.verificationJar.archiveFile; into new File(target, 'mods') }
+        if (project.hasProperty('utilsJar')) copy { from file(project.property('utilsJar')); into new File(target, 'mods') }
+    }
+}
+
+tasks.register('spectatorIntegrationTest', JavaExec) {
+    dependsOn testClasses, jar, verificationJar
+    classpath = sourceSets.test.runtimeClasspath
+    mainClass = 'pl.bongo.teleports.SpectatorIntegrationHarness'
+    args(project.findProperty('spectatorServer') ?: 'verification-server')
+    doFirst {
+        def target = file(project.findProperty('spectatorServer') ?: 'verification-server')
+        copy { from tasks.jar.archiveFile; from tasks.verificationJar.archiveFile; into new File(target, 'mods') }
+        if (project.hasProperty('utilsJar')) copy { from file(project.property('utilsJar')); into new File(target, 'mods') }
+    }
+}
+
+tasks.register('dialogLifecycleTest', JavaExec) {
+    dependsOn testClasses, jar, verificationJar
+    classpath = sourceSets.test.runtimeClasspath
+    mainClass = 'pl.bongo.teleports.DialogLifecycleHarness'
+    args layout.projectDirectory.dir('verification-allmods').asFile.absolutePath
+    doFirst {
+        if (!file('verification-allmods/claim-suite-fixture.txt').exists())
+            throw new GradleException('Prepare the isolated verification-allmods fixture server first.')
+        fileTree('verification-allmods/mods') { include 'BongosTeleports-*.jar' }.each { delete it }
         copy { from tasks.jar.archiveFile; from tasks.verificationJar.archiveFile; into 'verification-allmods/mods' }
     }
 }

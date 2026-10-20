@@ -57,6 +57,8 @@ public final class SharedClaimsHarness {
     }
     static void fixture() throws Exception {
         if(!Files.exists(root.resolve("claim-suite-fixture.txt"))) throw new IllegalStateException("Not an isolated claim fixture server");
+        Files.writeString(root.resolve("ops.json"),"[]");
+        Files.deleteIfExists(root.resolve("config/bongoutils/social.json"));
         Files.createDirectories(root.resolve("config"));var gp=root.resolve("plugins/GriefPreventionData");Files.createDirectories(gp.resolve("ClaimData"));
         Files.writeString(gp.resolve("config.yml"),"GriefPrevention:\n  Claims:\n    Mode:\n      world: Survival\n    PvPToggle:\n      Claim:\n        Enabled: true\n      Subdivision:\n        Enabled: false\n");
         try(var files=Files.list(gp.resolve("ClaimData"))) { for(Path file:files.filter(p->p.toString().endsWith(".yml")).toList()) Files.delete(file); }
@@ -137,7 +139,7 @@ public final class SharedClaimsHarness {
                 at(a,30.5,1,3.5);IntegrationHarness.click(a,30,0,5);a.message("postawiony");
                 equip(a,"ender_eye","synchronizer");at(a,.5,1,3.5);IntegrationHarness.click(a,0,1,5);a.message("pierwszy pad");at(a,30.5,1,3.5);IntegrationHarness.click(a,30,1,5);a.message("zsynchronizowane");
                 at(c,.5,1.8125,5.5);c.message("Access Trust");check(true,"shared local off blocks real public-pad teleport");
-                set(a,false,"Publiczne pady","Dziedzicz");at(c,.5,1,3.5);at(c,.5,1.8125,5.5);c.message("Teleportowano przez pad");c.drain(200);check(Math.abs(c.x-30.5)<.01,"reset inherits global flag and opens actual pad");at(c,10.5,1,3.5);
+                set(a,false,"Publiczne pady","Dziedzicz");at(c,.5,1,3.5);at(c,.5,1.8125,5.5);c.message("Teleported through the pad");c.drain(200);check(Math.abs(c.x-30.5)<.01,"reset inherits global flag and opens actual pad");at(c,10.5,1,3.5);
                 a.command("clan create ClaimTeam CT");a.drain(300);a.command("clan invite "+MATE);a.drain(200);b.command("clan accept");b.drain(400);
                 at(b,30.5,1,3.5);trust(b,"BUILD",true);trust(b,"CONTAINER",true);trust(b,"ACCESS",true);trust(b,"MANAGE",false);trust(b,"EDIT",false);
                 b.command("manageclaim");b.message("Manage Trust");check(true,"clan Build Trust does not grant panel management");
