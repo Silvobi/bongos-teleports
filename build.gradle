@@ -123,3 +123,17 @@ tasks.register('sharedClaimsWithoutUtilsTest', JavaExec) {
         copy { from tasks.jar.archiveFile; from tasks.verificationJar.archiveFile; into 'verification-allmods/mods' }
     }
 }
+
+// Social features are tested against BongoUtils + clans + GP3D on the same isolated vanilla fixture.
+tasks.register('socialFeaturesTest', JavaExec) {
+    dependsOn testClasses, jar, verificationJar
+    classpath = sourceSets.test.runtimeClasspath
+    mainClass = 'pl.bongo.teleports.SocialFeaturesHarness'
+    args layout.projectDirectory.dir('verification-allmods').asFile.absolutePath
+    if(project.hasProperty('socialStandalone')) args 'standalone'
+    doFirst {
+        if (!file('verification-allmods/claim-suite-fixture.txt').exists())
+            throw new GradleException('Prepare the isolated verification-allmods fixture server first.')
+        copy { from tasks.jar.archiveFile; from tasks.verificationJar.archiveFile; into 'verification-allmods/mods' }
+    }
+}

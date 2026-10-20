@@ -8,6 +8,19 @@ import java.nio.file.*;
 public final class RecipeVerification implements ModInitializer {
     public void onInitialize() {
         net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback.EVENT.register((dispatcher,registry,environment)-> {
+            dispatcher.register(net.minecraft.commands.Commands.literal("verify-filtered").requires(source->source.getEntity()==null).executes(c->{
+                var server=c.getSource().getServer();
+                if(!Files.exists(server.getServerDirectory().resolve("claim-suite-fixture.txt"))) throw new IllegalStateException("Not a fixture server");
+                var sender=server.getPlayerList().getPlayerByName("Bcfowner");var target=server.getPlayerList().getPlayerByName("Bcfmate");
+                var message=net.minecraft.network.chat.PlayerChatMessage.unsigned(sender.getUUID(),"filtered @Bcfmate");
+                var mask=new net.minecraft.network.chat.FilterMask(18);mask.setFiltered(0);
+                target.connection.sendPlayerChatMessage(message.filter(mask),net.minecraft.network.chat.ChatType.bind(net.minecraft.network.chat.ChatType.CHAT,sender.createCommandSourceStack()));return 1;
+            }));
+            dispatcher.register(net.minecraft.commands.Commands.literal("verify-idle").requires(source->source.getEntity()==null)
+                .then(net.minecraft.commands.Commands.argument("name",com.mojang.brigadier.arguments.StringArgumentType.word())
+                .then(net.minecraft.commands.Commands.argument("seconds",com.mojang.brigadier.arguments.IntegerArgumentType.integer(0,301)).executes(c->{
+                    ClaimSuiteFixture.idle(c.getSource().getServer(),com.mojang.brigadier.arguments.StringArgumentType.getString(c,"name"),com.mojang.brigadier.arguments.IntegerArgumentType.getInteger(c,"seconds"));return 1;
+                }))));
             dispatcher.register(net.minecraft.commands.Commands.literal("verify-gp")
                 .requires(net.minecraft.commands.Commands.hasPermission(net.minecraft.commands.Commands.LEVEL_GAMEMASTERS))
                 .then(net.minecraft.commands.Commands.argument("name",com.mojang.brigadier.arguments.StringArgumentType.word()).executes(c->{

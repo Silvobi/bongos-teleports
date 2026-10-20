@@ -299,7 +299,7 @@ public final class IntegrationHarness {
                 } else if(type==GamePacketTypes.CLIENTBOUND_SYSTEM_CHAT) { var chat=ClientboundSystemChatPacket.STREAM_CODEC.decode(buffer); events.add(chat); result=chat.content(); }
                 else if(type==GamePacketTypes.CLIENTBOUND_LEVEL_PARTICLES) result=ClientboundLevelParticlesPacket.STREAM_CODEC.decode(buffer);
                 else if(type==GamePacketTypes.CLIENTBOUND_PLAYER_CHAT) {
-                    var p=ClientboundPlayerChatPacket.STREAM_CODEC.decode(buffer);result=p.chatType().decorate(p.unsignedContent().orElseGet(()->Component.literal(p.body().content())));
+                    var p=ClientboundPlayerChatPacket.STREAM_CODEC.decode(buffer);events.add(p);result=p.chatType().decorate(p.unsignedContent().orElseGet(()->Component.literal(p.body().content())));
                 } else if(type==GamePacketTypes.CLIENTBOUND_DISGUISED_CHAT) {
                     var p=ClientboundDisguisedChatPacket.STREAM_CODEC.decode(buffer);result=p.chatType().decorate(p.message());
                 } else if(type==GamePacketTypes.CLIENTBOUND_OPEN_SCREEN) result=ClientboundOpenScreenPacket.STREAM_CODEC.decode(buffer);
